@@ -4,7 +4,8 @@ It was put together as a CMIS/OpenCmis learning exercise.
 ----Running the tests ----
 
 By default it expects Alfresco running locally on port 8080 with the default admin/admin credentials.
-With the Alfresco server running simply run
+With the Alfresco server running. 
+
+Dynamically deploy the custom model from src/test/resources/model/cmis-test-model.xml (Follow http://wiki.alfresco.com/wiki/Dynamic_Models#Deploying_and_activating_a_custom_model)
 
 mvn clean test
-
