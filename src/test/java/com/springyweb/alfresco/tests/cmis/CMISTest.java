@@ -33,6 +33,7 @@ public class CMISTest {
   private static final String TEST_CMIS_DOCUMENT_TYPE = "swct:document";
   private static final String TEST_CMIS_PROPERY_SINGLE_INT = "swct:propSingleInt";
   private static final String TEST_CMIS_PROPERY_SINGLE_DOUBLE = "swct:propSingleDouble";
+  private static final String TEST_CMIS_PROPERY_SINGLE_BOOLEAN = "swct:propSingleBoolean";
 
   private Folder root = null;
   private Folder testRootFolder = null;
@@ -279,6 +280,29 @@ public class CMISTest {
       4,
       queryResultCount(String.format(greaterThanOrEqualToQuery, testRootFolder.getId()),
         false));
+  }
+
+  @Test
+  public void comparisonPredicatesBoolean() {
+
+    final Map<String, Object> props = new HashMap<String, Object>();
+    // Create 2 test docs with true and false
+    props.put(TEST_CMIS_PROPERY_SINGLE_BOOLEAN, true);
+    createTestCMISDocument(testRootFolder, "test1", props);
+
+    props.put(TEST_CMIS_PROPERY_SINGLE_BOOLEAN, false);
+    createTestCMISDocument(testRootFolder, "test2", props);
+
+    final String[] testVals = { "true", "TRUE", "false", "FALSE" };
+    for (final String val: testVals) {
+      final String query = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
+        + " where in_folder('%s') and "
+        + TEST_CMIS_PROPERY_SINGLE_BOOLEAN + " =  %s";
+
+      assertEquals("Wrong result count", 1,
+        queryResultCount(String.format(query, testRootFolder.getId(), val), false));
+
+    }
   }
 
   private long queryResultCount(final String query, final boolean searchAllVersions) {

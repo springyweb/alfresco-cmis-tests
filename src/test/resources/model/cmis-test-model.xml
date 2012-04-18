@@ -26,7 +26,7 @@
 				<property name="swct:propSingleDouble">
 					<type>d:double</type>
 				</property>
-				<property name="swct:propSingleBoolen">
+				<property name="swct:propSingleBoolean">
 					<type>d:boolean</type>
 				</property>
 				<property name="swct:propSingleDate">
