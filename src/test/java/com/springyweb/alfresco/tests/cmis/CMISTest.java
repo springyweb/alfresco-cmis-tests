@@ -30,6 +30,8 @@ public class CMISTest {
   private static final String PASSWORD = "admin";
 
   private static final String TEST_FOLDER_NAME = "test_folder";
+  private static final String TEST_CMIS_DOCUMENT_TYPE = "swct:document";
+  private static final String TEST_CMIS_PROPERY_SINGLE_INT = "swct:propSingleInt";
 
   private Folder root = null;
   private Folder testRootFolder = null;
@@ -160,6 +162,64 @@ public class CMISTest {
 
   }
 
+  @Test
+  public void comparisonPredicatesInteger() {
+
+    final Map<String, Object> props = new HashMap<String, Object>();
+    // Create 4 test docs
+    for (int i = 1; i <= 4; i++) {
+      props.clear();
+      props.put(TEST_CMIS_PROPERY_SINGLE_INT, i);
+      createTestCMISDocument(testRootFolder, "test" + i, props);
+    }
+
+    final String equalsQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
+      + " where in_folder('%s') and "
+      + TEST_CMIS_PROPERY_SINGLE_INT + " =  %d";
+    assertEquals("Wrong result count", 1,
+      queryResultCount(String.format(equalsQuery, testRootFolder.getId(), 1), false));
+
+    final String notEqualsQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
+      + " where in_folder('%s') and "
+      + TEST_CMIS_PROPERY_SINGLE_INT + " <>  %d";
+    assertEquals("Wrong result count", 3,
+      queryResultCount(String.format(notEqualsQuery, testRootFolder.getId(), 1), false));
+
+
+    final String lessThanQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
+      + " where in_folder('%s') and "
+      + TEST_CMIS_PROPERY_SINGLE_INT + " <  %d";
+    assertEquals("Wrong result count", 2,
+      queryResultCount(String.format(lessThanQuery, testRootFolder.getId(), 3), false));
+
+    final String lessThanOrEqualToQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
+      + " where in_folder('%s') and "
+      + TEST_CMIS_PROPERY_SINGLE_INT + "<=  %d";
+    assertEquals(
+      "Wrong result count",
+      3,
+      queryResultCount(String.format(lessThanOrEqualToQuery, testRootFolder.getId(), 3),
+        false));
+
+    final String greaterThanQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
+      + " where in_folder('%s') and "
+      + TEST_CMIS_PROPERY_SINGLE_INT + " >  %d";
+    assertEquals("Wrong result count", 3,
+      queryResultCount(String.format(greaterThanQuery, testRootFolder.getId(), 1), false));
+
+    final String greaterThanOrEqualToQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
+      + " where in_folder('%s') and "
+      + TEST_CMIS_PROPERY_SINGLE_INT + " >=  %d";
+
+    assertEquals(
+      "Wrong result count",
+      4,
+      queryResultCount(String.format(greaterThanOrEqualToQuery, testRootFolder.getId(), 1),
+        false));
+
+
+  }
+
   private long queryResultCount(final String query, final boolean searchAllVersions) {
     return executeQuery(query, searchAllVersions).getTotalNumItems();
   }
@@ -220,6 +280,14 @@ public class CMISTest {
     final Map<String, String> props = new HashMap<String, String>();
     props.put(PropertyIds.NAME, name);
     props.put(PropertyIds.OBJECT_TYPE_ID, BaseTypeId.CMIS_DOCUMENT.value());
+    return parent.createDocument(props, null, null);
+  }
+
+  private Document createTestCMISDocument(final Folder parent, final String name,
+    final Map<String, Object> props) {
+
+    props.put(PropertyIds.NAME, name);
+    props.put(PropertyIds.OBJECT_TYPE_ID, "D:" + TEST_CMIS_DOCUMENT_TYPE);
     return parent.createDocument(props, null, null);
   }
 }
