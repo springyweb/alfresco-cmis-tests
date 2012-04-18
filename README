@@ -1,0 +1,7 @@
+This project is simply a set of unit tests deisgned to run against an Alfresco > 3.3.x repository.
+It was put together as a CMIS/OpenCmis learning exercise.
+
+----Running the tests ----
+
+By default it expects Alfresco running locally on port 8080 with the default admin/admin credentials.
+
