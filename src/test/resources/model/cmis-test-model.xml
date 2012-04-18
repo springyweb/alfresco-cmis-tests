@@ -23,7 +23,19 @@
 				<property name="swct:propSingleInt">
 					<type>d:int</type>
 				</property>
-			</properties>				
+				<property name="swct:propSingleDouble">
+					<type>d:double</type>
+				</property>
+				<property name="swct:propSingleBoolen">
+					<type>d:boolean</type>
+				</property>
+				<property name="swct:propSingleDate">
+					<type>d:date</type>
+				</property>
+				<property name="swct:propSingleDateTime">
+					<type>d:datetime</type>
+				</property>
+			</properties>
 			<associations>
 				<association name="swct:assocManyToManyOpt">
 					<title>Optional Many to Many Assoc</title>
