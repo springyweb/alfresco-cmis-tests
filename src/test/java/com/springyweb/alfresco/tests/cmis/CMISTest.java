@@ -67,6 +67,12 @@ public class CMISTest {
   private static final String PREDICATE_QUERY_TEMPLATE_UNQUOTED_STRING = "SELECT * from "
     + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %s %s %s";
 
+  // Note the replaceable parameters here are (in order) folder id,property,predicate,value
+  // SELECT * from swct:document where in_folder('workspace://SpacesStore/c22f856c-6cec-4e16-9c1c-60df621bba16') and swct:propSingleBoolean IS NULL
+  private static final String NULL_PREDICATE_QUERY_TEMPLATE_STRING = "SELECT * from "
+    + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %s %s";
+
+
   private Folder root = null;
   private Folder testRootFolder = null;
 
@@ -360,7 +366,7 @@ public class CMISTest {
   }
 
   @Test
-  public void likePredicates() {
+  public void likePredicate() {
 
     // note: The like predicate only applies to strings
     final Map<String, Object> props = new HashMap<String, Object>();
@@ -386,6 +392,33 @@ public class CMISTest {
     testPredicateQuerySingleResult(PREDICATE_QUERY_TEMPLATE_STRING, expectedId,
       testRootFolder.getId(),
       PropertyIds.NAME, Predicate.LIKE.getSymbol(), "t\\_\\_t");
+  }
+
+  /**
+   * CMIS does not support null values for properties. Properties may be set or not set. The null predicate tests if the property is set or unset.
+   * This applies to both single valued and multi-valued properties. For multi-valued properties if the property is set it is NOT NULL: the values of
+   * the multi-valued properties are not important. This differs from what you would expect from the SQL-92 specification.
+   */
+  @Test
+  public void nullPredicate() {
+
+    final Map<String, Object> props = new HashMap<String, Object>();
+    final String idWithoutPropertySet = createTestCMISDocument(testRootFolder, "test", props)
+      .getId();
+
+    props.put(TEST_CMIS_PROPERY_SINGLE_BOOLEAN, true);
+    final String idWithPropertySet = createTestCMISDocument(testRootFolder, "test2", props)
+      .getId();
+
+    // Test for the item without the property set using IS NULL
+    testPredicateQuerySingleResult(NULL_PREDICATE_QUERY_TEMPLATE_STRING, idWithoutPropertySet,
+      testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_BOOLEAN, Predicate.IS_NULL.getSymbol());
+
+    // Test for the item with the property set using IS NOT NULL
+    testPredicateQuerySingleResult(NULL_PREDICATE_QUERY_TEMPLATE_STRING, idWithPropertySet,
+      testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_BOOLEAN, Predicate.IS_NOT_NULL.getSymbol());
   }
 
   /**

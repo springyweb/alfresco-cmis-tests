@@ -16,7 +16,9 @@ public enum Predicate {
   LESS_THAN("<"),
   LESS_THAN_EQUAL_TO("<="),
   IN("IN"),
-  LIKE("LIKE");
+  LIKE("LIKE"),
+  IS_NOT_NULL("IS NOT NULL"),
+  IS_NULL("IS NULL");
 
   private String symbol;
 
