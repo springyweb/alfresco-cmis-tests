@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.alfresco.util.ISO8601DateFormat;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
@@ -296,35 +297,22 @@ public class CMISTest {
 
   @Test
   public void inPredicatesString() {
+    final TreeSet<Object> allTokens = new TreeSet<Object>();
+    allTokens.add("foo");
+    allTokens.add("bar");
+    allTokens.add("baz");
 
-    // Create test documents
-    final Map<String, Object> props = new HashMap<String, Object>();
-    final String[] strings = { "foo", "bar", "baz" };
-    for (int i = 0; i < strings.length; i++) {
-      props.put(TEST_CMIS_PROPERY_SINGLE_STRING, strings[i]);
-      createTestCMISDocument(testRootFolder, "test" + i, props);
-    }
+    testInPredicate(allTokens, TEST_CMIS_PROPERY_SINGLE_STRING, true);
+  }
 
-    // These are the string that will be adding to the IN predicate
-    final Set<String> expectedStrings = new HashSet<String>();
-    expectedStrings.add("bar");
-    expectedStrings.add("baz");
+  @Test
+  public void inPredicatesInteger() {
+    final TreeSet<Object> allTokens = new TreeSet<Object>();
+    allTokens.add(1);
+    allTokens.add(2);
+    allTokens.add(3);
 
-
-    final ItemIterable<QueryResult> predicateQueryResults = getPredicateQueryResults(
-      PREDICATE_QUERY_TEMPLATE_UNQUOTED_STRING, 1, testRootFolder.getId(),
-      TEST_CMIS_PROPERY_SINGLE_STRING,
-      Predicate.IN.getSymbol(), buildInStringValues(expectedStrings));
-
-    // Compare the expected string with the actual strings
-    final Set<String> actualStrings = new HashSet<String>();
-
-    for (final QueryResult queryResult: predicateQueryResults) {
-      actualStrings.add((String)queryResult.getPropertyById(TEST_CMIS_PROPERY_SINGLE_STRING)
-        .getFirstValue());
-    }
-
-    assertEquals(expectedStrings, actualStrings);
+    testInPredicate(allTokens, TEST_CMIS_PROPERY_SINGLE_INT, false);
   }
 
   /**
@@ -333,9 +321,15 @@ public class CMISTest {
    *          e.g {"bar", "baz"}
    * @return ('bar','baz')
    */
-  private String buildInStringValues(final Set<String> values) {
+  private String buildInStringValues(final Set<Object> values, final boolean quoteElements) {
+    String separatedValues = "";
+    if (quoteElements) {
+      separatedValues = StringUtils.join(quoteValues(values).toArray(), ",");
+    } else {
+      separatedValues = StringUtils.join(values.toArray(), ",");
+    }
     final StringBuilder sb = new StringBuilder("(");
-    sb.append(StringUtils.join(quoteValues(values).toArray(new String[values.size()]), ","));
+    sb.append(separatedValues);
     sb.append(")");
     return sb.toString();
   }
@@ -346,9 +340,9 @@ public class CMISTest {
    *          eq {"foo", "bar"}
    * @return {"'foo'", "'bar'"}
    */
-  private Set<String> quoteValues(final Set<String> values) {
-    final Set<String> quotedValues = new HashSet<String>(values.size());
-    for (final String value: values) {
+  private Set<Object> quoteValues(final Set<Object> values) {
+    final Set<Object> quotedValues = new HashSet<Object>(values.size());
+    for (final Object value: values) {
       quotedValues.add(quote(value));
     }
     return quotedValues;
@@ -360,8 +354,8 @@ public class CMISTest {
    *          e.g baz
    * @return 'baz'
    */
-  private String quote(final String s) {
-    return new StringBuilder("'").append(s).append("'").toString();
+  private String quote(final Object o) {
+    return new StringBuilder("'").append(o).append("'").toString();
   }
 
   @Test
@@ -457,6 +451,44 @@ public class CMISTest {
 
     assertEquals("Wrong result count", expectedResultCount,
       queryResultCount(String.format(queryTemplate, values), false));
+  }
+
+  private void testInPredicate(final Set<Object> allTokens, final String propertyName,
+    final boolean quoteElements) {
+
+    // Make searchTokens a subset of allTokens by removing the last element
+    final TreeSet<Object> searchTokens = new TreeSet<Object>();
+    searchTokens.addAll(allTokens);
+    searchTokens.remove(searchTokens.last());
+
+    // These are the string that will be added to the IN predicate
+    final Set<String> expectedIds = new HashSet<String>();
+
+    // Create test documents
+    final Map<String, Object> props = new HashMap<String, Object>();
+
+    int counter = 0;
+    for (final Object object: allTokens) {
+      props.put(propertyName, object);
+      final Document document = createTestCMISDocument(testRootFolder, "test" + counter++, props);
+      if (searchTokens.contains(object)) {
+        expectedIds.add(document.getId());
+      }
+    }
+
+    final ItemIterable<QueryResult> predicateQueryResults = getPredicateQueryResults(
+      PREDICATE_QUERY_TEMPLATE_UNQUOTED_STRING, 1, testRootFolder.getId(),
+      propertyName,
+      Predicate.IN.getSymbol(), buildInStringValues(searchTokens, quoteElements));
+
+    // Compare the expected string with the actual strings
+    final Set<String> actualIds = new HashSet<String>();
+
+    for (final QueryResult queryResult: predicateQueryResults) {
+      actualIds.add((String)queryResult.getPropertyById(PropertyIds.OBJECT_ID).getFirstValue());
+    }
+
+    assertEquals(expectedIds, actualIds);
   }
 
   private ItemIterable<QueryResult> getPredicateQueryResults(final String queryTemplate,
