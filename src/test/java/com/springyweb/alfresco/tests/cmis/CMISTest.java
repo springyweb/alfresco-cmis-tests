@@ -358,6 +358,23 @@ public class CMISTest {
     testInPredicateValues(searchTokens, expectedIds, TEST_CMIS_PROPERY_SINGLE_DATE_TIME, true);
   }
 
+  @Test
+  public void likePredicates() {
+    // note: The like predicate only applies to strings
+    final Map<String, Object> props = new HashMap<String, Object>();
+    props.put(TEST_CMIS_PROPERY_SINGLE_STRING, "test");
+    final String expectedId = createTestCMISDocument(testRootFolder, "test", props).getId();
+
+    // All of these string should find test
+    final String[] testVals = { "%test%", "test", "t%t", "t__t" };
+
+    for (final String testVal: testVals) {
+      testPredicateQuerySingleResult(PREDICATE_QUERY_TEMPLATE_STRING, expectedId,
+        testRootFolder.getId(),
+        TEST_CMIS_PROPERY_SINGLE_STRING, Predicate.LIKE.getSymbol(), testVal);
+    }
+  }
+
   /**
    * 
    * @param values
@@ -544,6 +561,19 @@ public class CMISTest {
     }
 
     assertEquals(expectedIds, actualIds);
+  }
+
+  private void testPredicateQuerySingleResult(final String queryTemplate,
+    final String expectedId, final Object... values) {
+
+    final ItemIterable<QueryResult> results = executeQuery(
+      String.format(queryTemplate, values), false);
+
+    assertEquals("Wrong result count", 1, results.getTotalNumItems());
+    final String actualId = (String)results.iterator().next()
+      .getPropertyById(PropertyIds.OBJECT_ID).getFirstValue();
+    assertEquals("Wrong id found", expectedId, actualId);
+
   }
 
   private ItemIterable<QueryResult> getPredicateQueryResults(final String queryTemplate,

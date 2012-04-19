@@ -15,7 +15,8 @@ public enum Predicate {
   GREATER_THAN_EQUAL_TO(">="),
   LESS_THAN("<"),
   LESS_THAN_EQUAL_TO("<="),
-  IN("IN");
+  IN("IN"),
+  LIKE("LIKE");
 
   private String symbol;
 
