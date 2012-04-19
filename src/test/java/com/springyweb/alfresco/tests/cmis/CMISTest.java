@@ -28,6 +28,7 @@ import org.apache.chemistry.opencmis.commons.enums.UnfileObject;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisObjectNotFoundException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisRuntimeException;
 import org.apache.commons.lang3.StringUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -96,7 +97,7 @@ public class CMISTest {
 
   }
 
-  // @After
+  @After
   public void tearDown() {
     if (testRootFolder != null) {
       System.out.println("Removing test data");
@@ -360,10 +361,10 @@ public class CMISTest {
 
   @Test
   public void likePredicates() {
+
     // note: The like predicate only applies to strings
     final Map<String, Object> props = new HashMap<String, Object>();
-    props.put(TEST_CMIS_PROPERY_SINGLE_STRING, "test");
-    final String expectedId = createTestCMISDocument(testRootFolder, "test", props).getId();
+    String expectedId = createTestCMISDocument(testRootFolder, "test", props).getId();
 
     // All of these string should find test
     final String[] testVals = { "%test%", "test", "t%t", "t__t" };
@@ -371,8 +372,20 @@ public class CMISTest {
     for (final String testVal: testVals) {
       testPredicateQuerySingleResult(PREDICATE_QUERY_TEMPLATE_STRING, expectedId,
         testRootFolder.getId(),
-        TEST_CMIS_PROPERY_SINGLE_STRING, Predicate.LIKE.getSymbol(), testVal);
+        PropertyIds.NAME, Predicate.LIKE.getSymbol(), testVal);
     }
+
+    // Test escaping %
+    expectedId = createTestCMISDocument(testRootFolder, "t%t", props).getId();
+    testPredicateQuerySingleResult(PREDICATE_QUERY_TEMPLATE_STRING, expectedId,
+      testRootFolder.getId(),
+      PropertyIds.NAME, Predicate.LIKE.getSymbol(), "t\\%t");
+
+    // Test escaping _
+    expectedId = createTestCMISDocument(testRootFolder, "t__t", props).getId();
+    testPredicateQuerySingleResult(PREDICATE_QUERY_TEMPLATE_STRING, expectedId,
+      testRootFolder.getId(),
+      PropertyIds.NAME, Predicate.LIKE.getSymbol(), "t\\_\\_t");
   }
 
   /**
