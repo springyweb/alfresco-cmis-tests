@@ -325,6 +325,39 @@ public class CMISTest {
     testInPredicate(allTokens, TEST_CMIS_PROPERY_SINGLE_DOUBLE, false);
   }
 
+  @Test
+  public void inPredicatesDateTime() {
+    final Map<String, Object> props = new HashMap<String, Object>();
+    final TreeSet<GregorianCalendar> allCals = new TreeSet<GregorianCalendar>();
+    final TreeSet<GregorianCalendar> searchCals = new TreeSet<GregorianCalendar>();
+    final TreeSet<Object> searchTokens = new TreeSet<Object>();
+
+    final Set<String> expectedIds = new HashSet<String>();
+
+    final GregorianCalendar calendar = new GregorianCalendar();
+
+    for (int i = 0; i < 4; i++) {
+      props.clear();
+      allCals.add((GregorianCalendar)calendar.clone());
+      calendar.add(Calendar.MILLISECOND, 1);
+    }
+
+    searchCals.addAll(allCals);
+    searchCals.remove(searchCals.last());
+
+    int counter = 0;
+    for (final GregorianCalendar cal: allCals) {
+      props.put(TEST_CMIS_PROPERY_SINGLE_DATE_TIME, cal);
+      final Document document = createTestCMISDocument(testRootFolder, "test" + counter++, props);
+      if (searchCals.contains(cal)) {
+        expectedIds.add(document.getId());
+        searchTokens.add(ISO8601DateFormat.format(cal.getTime()));
+      }
+    }
+
+    testInPredicateValues(searchTokens, expectedIds, TEST_CMIS_PROPERY_SINGLE_DATE_TIME, true);
+  }
+
   /**
    * 
    * @param values
@@ -485,6 +518,18 @@ public class CMISTest {
         expectedIds.add(document.getId());
       }
     }
+
+    testInPredicateValues(searchTokens, expectedIds, propertyName, quoteElements);
+  }
+
+  /**
+   * @param propertyName
+   * @param quoteElements
+   * @param searchTokens
+   * @param expectedIds
+   */
+  private void testInPredicateValues(final TreeSet<Object> searchTokens,
+    final Set<String> expectedIds, final String propertyName, final boolean quoteElements) {
 
     final ItemIterable<QueryResult> predicateQueryResults = getPredicateQueryResults(
       PREDICATE_QUERY_TEMPLATE_UNQUOTED_STRING, 1, testRootFolder.getId(),
