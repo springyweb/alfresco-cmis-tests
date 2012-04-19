@@ -6,7 +6,9 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.alfresco.util.ISO8601DateFormat;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
@@ -24,6 +26,7 @@ import org.apache.chemistry.opencmis.commons.enums.BindingType;
 import org.apache.chemistry.opencmis.commons.enums.UnfileObject;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisObjectNotFoundException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisRuntimeException;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -58,6 +61,9 @@ public class CMISTest {
 
   private static final String PREDICATE_QUERY_TEMPLATE_DATETIME = "SELECT * from "
     + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %s %s TIMESTAMP '%s'";
+
+  private static final String PREDICATE_QUERY_TEMPLATE_UNQUOTED_STRING = "SELECT * from "
+    + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %s %s %s";
 
   private Folder root = null;
   private Folder testRootFolder = null;
@@ -289,6 +295,76 @@ public class CMISTest {
   }
 
   @Test
+  public void inPredicatesString() {
+
+    // Create test documents
+    final Map<String, Object> props = new HashMap<String, Object>();
+    final String[] strings = { "foo", "bar", "baz" };
+    for (int i = 0; i < strings.length; i++) {
+      props.put(TEST_CMIS_PROPERY_SINGLE_STRING, strings[i]);
+      createTestCMISDocument(testRootFolder, "test" + i, props);
+    }
+
+    // These are the string that will be adding to the IN predicate
+    final Set<String> expectedStrings = new HashSet<String>();
+    expectedStrings.add("bar");
+    expectedStrings.add("baz");
+
+
+    final ItemIterable<QueryResult> predicateQueryResults = getPredicateQueryResults(
+      PREDICATE_QUERY_TEMPLATE_UNQUOTED_STRING, 1, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_STRING,
+      Predicate.IN.getSymbol(), buildInStringValues(expectedStrings));
+
+    // Compare the expected string with the actual strings
+    final Set<String> actualStrings = new HashSet<String>();
+
+    for (final QueryResult queryResult: predicateQueryResults) {
+      actualStrings.add((String)queryResult.getPropertyById(TEST_CMIS_PROPERY_SINGLE_STRING)
+        .getFirstValue());
+    }
+
+    assertEquals(expectedStrings, actualStrings);
+  }
+
+  /**
+   * 
+   * @param values
+   *          e.g {"bar", "baz"}
+   * @return ('bar','baz')
+   */
+  private String buildInStringValues(final Set<String> values) {
+    final StringBuilder sb = new StringBuilder("(");
+    sb.append(StringUtils.join(quoteValues(values).toArray(new String[values.size()]), ","));
+    sb.append(")");
+    return sb.toString();
+  }
+
+  /**
+   * 
+   * @param values
+   *          eq {"foo", "bar"}
+   * @return {"'foo'", "'bar'"}
+   */
+  private Set<String> quoteValues(final Set<String> values) {
+    final Set<String> quotedValues = new HashSet<String>(values.size());
+    for (final String value: values) {
+      quotedValues.add(quote(value));
+    }
+    return quotedValues;
+  }
+
+  /**
+   * 
+   * @param s
+   *          e.g baz
+   * @return 'baz'
+   */
+  private String quote(final String s) {
+    return new StringBuilder("'").append(s).append("'").toString();
+  }
+
+  @Test
   public void folderSearches() {
 
     final String allFoldersByNameQuery = "SELECT * FROM cmis:folder WHERE cmis:name='%s'";
@@ -328,27 +404,6 @@ public class CMISTest {
       queryResultCount(
         String.format(allFoldersInTreeQuery, testRootFolder.getId(), testFolderName),
         false));
-  }
-
-  /**
-   * @param query
-   * @param searchAllVersions
-   * @return The total number of items found by the query
-   */
-  private long queryResultCount(final String query, final boolean searchAllVersions) {
-    return executeQuery(query, searchAllVersions).getTotalNumItems();
-  }
-
-  /**
-   * 
-   * @param query
-   * @param searchAllVersions
-   * @return The query results
-   */
-  private ItemIterable<QueryResult> executeQuery(final String query, final boolean searchAllVersions) {
-    System.out.println("Executing query " + query + " (Searching all versions: "
-      + searchAllVersions + ")");
-    return session.query(query, false);
   }
 
   /**
@@ -404,12 +459,39 @@ public class CMISTest {
       queryResultCount(String.format(queryTemplate, values), false));
   }
 
+  private ItemIterable<QueryResult> getPredicateQueryResults(final String queryTemplate,
+    final int expectedResultCount,
+    final Object... values) {
+
+    return executeQuery(String.format(queryTemplate, values), false);
+  }
+
+  /**
+   * @param query
+   * @param searchAllVersions
+   * @return The total number of items found by the query
+   */
+  private long queryResultCount(final String query, final boolean searchAllVersions) {
+    return executeQuery(query, searchAllVersions).getTotalNumItems();
+  }
+
+  /**
+   * 
+   * @param query
+   * @param searchAllVersions
+   * @return The query results
+   */
+  private ItemIterable<QueryResult> executeQuery(final String query, final boolean searchAllVersions) {
+    System.out.println("Executing query " + query + " (Searching all versions: "
+      + searchAllVersions + ")");
+    return session.query(query, false);
+  }
+
   private Document createTestCMISDocument(final Folder parent, final String name,
     final Map<String, Object> props) {
 
     props.put(PropertyIds.NAME, name);
     props.put(PropertyIds.OBJECT_TYPE_ID, "D:" + TEST_CMIS_DOCUMENT_TYPE);
-    System.out.println("Creating new doc in parent folder " + parent.getId() + " " + props);
     return parent.createDocument(props, null, null);
   }
 }
