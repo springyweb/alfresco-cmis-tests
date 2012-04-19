@@ -315,6 +315,16 @@ public class CMISTest {
     testInPredicate(allTokens, TEST_CMIS_PROPERY_SINGLE_INT, false);
   }
 
+  @Test
+  public void inPredicatesDecimal() {
+    final TreeSet<Object> allTokens = new TreeSet<Object>();
+    allTokens.add(1.0);
+    allTokens.add(2.1);
+    allTokens.add(3.2);
+
+    testInPredicate(allTokens, TEST_CMIS_PROPERY_SINGLE_DOUBLE, false);
+  }
+
   /**
    * 
    * @param values
