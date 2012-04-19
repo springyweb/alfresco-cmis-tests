@@ -644,6 +644,19 @@ public class CMISTest {
       TEST_CMIS_PROPERY_MULTIPLE_DATE_TIME);
   }
 
+  /**
+   * This is an extension to SQL-92 and defines a new IN predicate for use only with multi-valued properties. The only qualifier support is ANY. The
+   * predicate is true if any of the values of a multi-valued property match any of those in the IN list. The quantified IN predicate is only
+   * supported for multi-valued properties of types with a data type that supports IN, as described above.
+   * 
+   * @param props
+   *          - properties to add to the created test document
+   * @param predicateValues
+   *          - Bracketed, Comma separated list of values to use for the query. The calling function should ensure that this list is not EXACTLY the
+   *          same as the values stored in the multi-value property as we are testing for ANY
+   * @param propertyName
+   *          - The name of the property being tested
+   */
   private void testQuantifiedInPredicate(final Map<String, Object> props,
     final String predicateValues, final String propertyName) {
 
@@ -656,7 +669,9 @@ public class CMISTest {
    * 
    * @param values
    *          e.g {"bar", "baz"}
-   * @return ('bar','baz')
+   * @param quoteElements
+   *          - If true than each element will be quoted with single quotes.
+   * @return e.g ('bar','baz')
    */
   private String bracketAndDelimit(final Set<Object> values, final boolean quoteElements) {
     String separatedValues = "";
