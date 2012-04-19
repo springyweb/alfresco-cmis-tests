@@ -48,6 +48,7 @@ public class CMISTest {
   private static final String TEST_CMIS_PROPERY_SINGLE_STRING = "swct:propSingleString";
 
   private static final String TEST_CMIS_PROPERY_MULTIPLE_STRING = "swct:propMultipleString";
+  private static final String TEST_CMIS_PROPERY_MULTIPLE_INT = "swct:propMultipleInt";
 
   // Note the replaceable parameters here are (in order) folder id,property,predicate,value
   // e.g SELECT * from swct:document where in_folder('workspace://SpacesStore/c22f856c-6cec-4e16-9c1c-60df621bba16') and swct:propSingleString = 'b'
@@ -79,6 +80,9 @@ public class CMISTest {
   // swct:propSingleBoolean
   private static final String PREDICATE_QUANTIFIED_QUERY_TEMPLATE_STRING = "SELECT * from "
     + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and '%s' %s %s";
+
+  private static final String PREDICATE_QUANTIFIED_QUERY_TEMPLATE_INTEGER = "SELECT * from "
+    + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %d %s %s";
 
 
   private Folder root = null;
@@ -434,7 +438,7 @@ public class CMISTest {
    * operator is supported. The only quantifier supported is ANY (ALL and SOME are not supported).
    */
   @Test
-  public void testQuantifiedComparisonPredicate() {
+  public void testQuantifiedComparisonPredicateString() {
 
     final List<String> values = Arrays.asList(new String[] { "foo", "bar", "baz" });
     final Map<String, Object> props = new HashMap<String, Object>();
@@ -445,6 +449,21 @@ public class CMISTest {
       testPredicateQuerySingleResult(PREDICATE_QUANTIFIED_QUERY_TEMPLATE_STRING, expectedId,
         testRootFolder.getId(),
         value, Predicate.QUANTIFIED_COMPARISION.getSymbol(), TEST_CMIS_PROPERY_MULTIPLE_STRING);
+    }
+  }
+
+  @Test
+  public void testQuantifiedComparisonPredicateInteger() {
+
+    final List<Integer> values = Arrays.asList(new Integer[] { 1, 2, 3 });
+    final Map<String, Object> props = new HashMap<String, Object>();
+    props.put(TEST_CMIS_PROPERY_MULTIPLE_INT, values);
+
+    final String expectedId = createTestCMISDocument(testRootFolder, "test", props).getId();
+    for (final Integer value: values) {
+      testPredicateQuerySingleResult(PREDICATE_QUANTIFIED_QUERY_TEMPLATE_INTEGER, expectedId,
+        testRootFolder.getId(),
+        value, Predicate.QUANTIFIED_COMPARISION.getSymbol(), TEST_CMIS_PROPERY_MULTIPLE_INT);
     }
   }
 

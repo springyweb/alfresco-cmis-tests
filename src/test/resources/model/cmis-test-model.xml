@@ -42,6 +42,10 @@
 					<type>d:text</type>
 					<multiple>true</multiple>
 				</property>
+				<property name="swct:propMultipleInt">
+					<type>d:int</type>
+					<multiple>true</multiple>
+				</property>
 			</properties>
 			<associations>
 				<association name="swct:assocManyToManyOpt">
