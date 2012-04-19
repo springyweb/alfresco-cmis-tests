@@ -271,6 +271,24 @@ public class CMISTest {
   }
 
   @Test
+  public void comparisonPredicatesId() {
+
+    final Map<String, Object> props = new HashMap<String, Object>();
+    // Create 3 test docs - no properties required for ID testing
+    final String id1 = createTestCMISDocument(testRootFolder, "test1", props).getId();
+    createTestCMISDocument(testRootFolder, "test2", props).getId();
+    createTestCMISDocument(testRootFolder, "test3", props).getId();
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 1, testRootFolder.getId(),
+      PropertyIds.OBJECT_ID,
+      Predicate.EQUALS.getSymbol(), id1);
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 2, testRootFolder.getId(),
+      PropertyIds.OBJECT_ID,
+      Predicate.NOT_EQUALS.getSymbol(), id1);
+  }
+
+  @Test
   public void folderSearches() {
 
     final String allFoldersByNameQuery = "SELECT * FROM cmis:folder WHERE cmis:name='%s'";
