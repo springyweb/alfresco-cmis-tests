@@ -4,16 +4,30 @@
 	<groupId>com.springyweb.alfresco</groupId>
 	<artifactId>cmis-tests</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	
+	<repositories>
+		<repository>
+			<id>alfresco-releases</id>
+			<url>http://maven.alfresco.com/nexus/content/repositories/releases/</url>
+		</repository>
+	</repositories>
 	<dependencies>
 		<dependency>
 			<groupId>org.alfresco.cmis.client</groupId>
 			<artifactId>alfresco-opencmis-extension</artifactId>
 			<version>0.3</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.10</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.alfresco</groupId>
+			<artifactId>alfresco-core</artifactId>
+			<version>3.4.e</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

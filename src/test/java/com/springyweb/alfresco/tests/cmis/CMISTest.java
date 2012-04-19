@@ -2,9 +2,13 @@ package com.springyweb.alfresco.tests.cmis;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.alfresco.util.ISO8601DateFormat;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Document;
 import org.apache.chemistry.opencmis.client.api.Folder;
@@ -20,7 +24,6 @@ import org.apache.chemistry.opencmis.commons.enums.BindingType;
 import org.apache.chemistry.opencmis.commons.enums.UnfileObject;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisObjectNotFoundException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisRuntimeException;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -34,6 +37,27 @@ public class CMISTest {
   private static final String TEST_CMIS_PROPERY_SINGLE_INT = "swct:propSingleInt";
   private static final String TEST_CMIS_PROPERY_SINGLE_DOUBLE = "swct:propSingleDouble";
   private static final String TEST_CMIS_PROPERY_SINGLE_BOOLEAN = "swct:propSingleBoolean";
+  private static final String TEST_CMIS_PROPERY_SINGLE_DATE_TIME = "swct:propSingleDateTime";
+  private static final String TEST_CMIS_PROPERY_SINGLE_STRING = "swct:propSingleString";
+
+
+  // Note the replaceable parameters here are (in order) folder id,property,predicate,value
+  // e.g SELECT * from swct:document where in_folder('workspace://SpacesStore/c22f856c-6cec-4e16-9c1c-60df621bba16') and swct:propSingleString = 'b'
+  private static final String PREDICATE_QUERY_TEMPLATE_STRING = "SELECT * from "
+    + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %s %s '%s'";
+
+  private static final String PREDICATE_QUERY_TEMPLATE_BOOLEAN = "SELECT * from "
+    + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %s %s %b";
+
+  private static final String PREDICATE_QUERY_TEMPLATE_INTEGER = "SELECT * from "
+    + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %s %s %d";
+
+  // Note: We only use 1 decimal place e.g 1.0 not 1 or 1.0000
+  private static final String PREDICATE_QUERY_TEMPLATE_DECIMAL = "SELECT * from "
+    + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %s %s %.2g%n";
+
+  private static final String PREDICATE_QUERY_TEMPLATE_DATETIME = "SELECT * from "
+    + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %s %s TIMESTAMP '%s'";
 
   private Folder root = null;
   private Folder testRootFolder = null;
@@ -65,7 +89,7 @@ public class CMISTest {
 
   }
 
-  @After
+  // @After
   public void tearDown() {
     if (testRootFolder != null) {
       System.out.println("Removing test data");
@@ -75,6 +99,175 @@ public class CMISTest {
         e.printStackTrace();
       }
     }
+  }
+
+  @Test
+  public void comparisonPredicatesString() {
+
+    // Create test documents with a single string property
+    final Map<String, Object> props = new HashMap<String, Object>();
+
+    final String[] strings = { "b", "Bc", "c", "Cb" };
+    for (int i = 0; i < strings.length; i++) {
+      props.put(TEST_CMIS_PROPERY_SINGLE_STRING, strings[i]);
+      createTestCMISDocument(testRootFolder, "test" + i, props);
+    }
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 1, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_STRING,
+      Predicate.EQUALS.getSymbol(), "b");
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 3, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_STRING,
+      Predicate.NOT_EQUALS.getSymbol(), "b");
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 2, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_STRING,
+      Predicate.LESS_THAN.getSymbol(), "c");
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 3, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_STRING,
+      Predicate.LESS_THAN_EQUAL_TO.getSymbol(), "c");
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 3, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_STRING,
+      Predicate.GREATER_THAN.getSymbol(), "b");
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 4, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_STRING,
+      Predicate.GREATER_THAN_EQUAL_TO.getSymbol(), "b");
+  }
+
+  @Test
+  public void comparisonPredicatesInteger() {
+
+    final Map<String, Object> props = new HashMap<String, Object>();
+    // Create 4 test documents
+    for (int i = 1; i <= 4; i++) {
+      props.put(TEST_CMIS_PROPERY_SINGLE_INT, i);
+      createTestCMISDocument(testRootFolder, "test" + i, props);
+    }
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_INTEGER, 1, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_INT,
+      Predicate.EQUALS.getSymbol(), 1);
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_INTEGER, 3, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_INT,
+      Predicate.NOT_EQUALS.getSymbol(), 1);
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_INTEGER, 2, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_INT,
+      Predicate.LESS_THAN.getSymbol(), 3);
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_INTEGER, 3, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_INT,
+      Predicate.LESS_THAN_EQUAL_TO.getSymbol(), 3);
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_INTEGER, 3, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_INT,
+      Predicate.GREATER_THAN.getSymbol(), 1);
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_INTEGER, 4, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_INT,
+      Predicate.GREATER_THAN_EQUAL_TO.getSymbol(), 1);
+
+  }
+
+  @Test
+  public void comparisonPredicatesDecimal() {
+
+    final Map<String, Object> props = new HashMap<String, Object>();
+    // Create 4 test docs
+    props.put(TEST_CMIS_PROPERY_SINGLE_DOUBLE, 1.0);
+    createTestCMISDocument(testRootFolder, "test1", props);
+
+    props.put(TEST_CMIS_PROPERY_SINGLE_DOUBLE, 1.1);
+    createTestCMISDocument(testRootFolder, "test2", props);
+
+    props.put(TEST_CMIS_PROPERY_SINGLE_DOUBLE, 1.2);
+    createTestCMISDocument(testRootFolder, "test3", props);
+
+    props.put(TEST_CMIS_PROPERY_SINGLE_DOUBLE, 1.3);
+    createTestCMISDocument(testRootFolder, "test4", props);
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_DECIMAL, 1, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_DOUBLE,
+      Predicate.EQUALS.getSymbol(), 1.0);
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_DECIMAL, 3, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_DOUBLE,
+      Predicate.NOT_EQUALS.getSymbol(), 1.0);
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_DECIMAL, 2, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_DOUBLE,
+      Predicate.LESS_THAN.getSymbol(), 1.2);
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_DECIMAL, 3, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_DOUBLE,
+      Predicate.LESS_THAN_EQUAL_TO.getSymbol(), 1.2);
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_DECIMAL, 3, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_DOUBLE,
+      Predicate.GREATER_THAN.getSymbol(), 1.0);
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_DECIMAL, 4, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_DOUBLE,
+      Predicate.GREATER_THAN_EQUAL_TO.getSymbol(), 1.0);
+  }
+
+  @Test
+  public void comparisonPredicatesBoolean() {
+
+    final Map<String, Object> props = new HashMap<String, Object>();
+    // Create 2 test docs with true and false
+    props.put(TEST_CMIS_PROPERY_SINGLE_BOOLEAN, true);
+    createTestCMISDocument(testRootFolder, "test1", props);
+
+    props.put(TEST_CMIS_PROPERY_SINGLE_BOOLEAN, false);
+    createTestCMISDocument(testRootFolder, "test2", props);
+
+    final String[] testVals = { "true", "TRUE", "false", "FALSE" };
+    for (final String val: testVals) {
+      testPredicate(PREDICATE_QUERY_TEMPLATE_BOOLEAN, 1, testRootFolder.getId(),
+        TEST_CMIS_PROPERY_SINGLE_BOOLEAN,
+        Predicate.EQUALS.getSymbol(), val);
+    }
+  }
+
+  /**
+   * Note: For the datetime tests to work follow the instructions for changing the lucene analyzer (http://wiki.alfresco.com/wiki/CMIS_Query_Language#
+   * Configuring_DateTime_resolution)
+   * 
+   */
+  @Test
+  public void comparisonPredicatesDateTime() {
+
+    // Create 4 dates 1 Second apart Note: The time portion of the date is
+    // ignored
+    final Map<String, Object> props = new HashMap<String, Object>();
+    final Date[] dates = new Date[4];
+    final GregorianCalendar calendar = new GregorianCalendar();
+
+    for (int i = 0; i < dates.length; i++) {
+      props.clear();
+      dates[i] = calendar.getTime();
+      // Note: For OpenCmis to work we add the calendar object not the date (see
+      // http://blog.remysaissy.com/2012/04/solving-property-foo-is-datetime.html)
+      props.put(TEST_CMIS_PROPERY_SINGLE_DATE_TIME, calendar);
+      createTestCMISDocument(testRootFolder, "test" + i, props);
+      calendar.add(Calendar.MILLISECOND, 1);
+    }
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_DATETIME, 1, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_DATE_TIME,
+      Predicate.EQUALS.getSymbol(), ISO8601DateFormat.format(dates[0]));
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_DATETIME, 3, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_DATE_TIME,
+      Predicate.NOT_EQUALS.getSymbol(), ISO8601DateFormat.format(dates[0]));
+
+    // TODO: Add date inequality tests
   }
 
   @Test
@@ -119,196 +312,21 @@ public class CMISTest {
         false));
   }
 
-  @Test
-  public void comparisonPredicatesString() {
-
-    // Note:Strings collation is case sensitive and space/pad sensitive
-    // Collation is the default Java String collation Setup documents
-    // There A and B < a
-
-    createNamedDocument(testRootFolder, "a");
-    createNamedDocument(testRootFolder, "Ab");
-    createNamedDocument(testRootFolder, "b");
-    createNamedDocument(testRootFolder, "Ba");
-
-    final String nameEqualsQuery = "SELECT * from cmis:document where in_folder('%s') and cmis:name =  '%s'";
-    assertEquals("Wrong result count", 1,
-      queryResultCount(String.format(nameEqualsQuery, testRootFolder.getId(), "a"), false));
-
-    final String nameNotEqualsQuery = "SELECT * from cmis:document where in_folder('%s') and cmis:name <>  '%s'";
-    assertEquals("Wrong result count", 3,
-      queryResultCount(String.format(nameNotEqualsQuery, testRootFolder.getId(), "a"), false));
-
-
-    final String nameLessThanQuery = "SELECT * from cmis:document where in_folder('%s') and cmis:name <  '%s'";
-    assertEquals("Wrong result count", 2,
-      queryResultCount(String.format(nameLessThanQuery, testRootFolder.getId(), "a"), false));
-
-    final String nameLessThanOrEqualToQuery = "SELECT * from cmis:document where in_folder('%s') and cmis:name <=  '%s'";
-    assertEquals(
-      "Wrong result count",
-      3,
-      queryResultCount(String.format(nameLessThanOrEqualToQuery, testRootFolder.getId(), "a"),
-        false));
-
-    final String nameGreaterThanQuery = "SELECT * from cmis:document where in_folder('%s') and cmis:name >  '%s'";
-    assertEquals("Wrong result count", 1,
-      queryResultCount(String.format(nameGreaterThanQuery, testRootFolder.getId(), "a"), false));
-
-    final String nameGreaterThanOrEqualToQuery = "SELECT * from cmis:document where in_folder('%s') and cmis:name >=  '%s'";
-    assertEquals(
-      "Wrong result count",
-      2,
-      queryResultCount(String.format(nameGreaterThanOrEqualToQuery, testRootFolder.getId(), "a"),
-        false));
-
-  }
-
-  @Test
-  public void comparisonPredicatesInteger() {
-
-    final Map<String, Object> props = new HashMap<String, Object>();
-    // Create 4 test docs
-    for (int i = 1; i <= 4; i++) {
-      props.clear();
-      props.put(TEST_CMIS_PROPERY_SINGLE_INT, i);
-      createTestCMISDocument(testRootFolder, "test" + i, props);
-    }
-
-    final String equalsQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
-      + " where in_folder('%s') and "
-      + TEST_CMIS_PROPERY_SINGLE_INT + " =  %d";
-    assertEquals("Wrong result count", 1,
-      queryResultCount(String.format(equalsQuery, testRootFolder.getId(), 1), false));
-
-    final String notEqualsQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
-      + " where in_folder('%s') and "
-      + TEST_CMIS_PROPERY_SINGLE_INT + " <>  %d";
-    assertEquals("Wrong result count", 3,
-      queryResultCount(String.format(notEqualsQuery, testRootFolder.getId(), 1), false));
-
-
-    final String lessThanQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
-      + " where in_folder('%s') and "
-      + TEST_CMIS_PROPERY_SINGLE_INT + " <  %d";
-    assertEquals("Wrong result count", 2,
-      queryResultCount(String.format(lessThanQuery, testRootFolder.getId(), 3), false));
-
-    final String lessThanOrEqualToQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
-      + " where in_folder('%s') and "
-      + TEST_CMIS_PROPERY_SINGLE_INT + "<=  %d";
-    assertEquals(
-      "Wrong result count",
-      3,
-      queryResultCount(String.format(lessThanOrEqualToQuery, testRootFolder.getId(), 3),
-        false));
-
-    final String greaterThanQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
-      + " where in_folder('%s') and "
-      + TEST_CMIS_PROPERY_SINGLE_INT + " >  %d";
-    assertEquals("Wrong result count", 3,
-      queryResultCount(String.format(greaterThanQuery, testRootFolder.getId(), 1), false));
-
-    final String greaterThanOrEqualToQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
-      + " where in_folder('%s') and "
-      + TEST_CMIS_PROPERY_SINGLE_INT + " >=  %d";
-
-    assertEquals(
-      "Wrong result count",
-      4,
-      queryResultCount(String.format(greaterThanOrEqualToQuery, testRootFolder.getId(), 1),
-        false));
-  }
-
-  @Test
-  public void comparisonPredicatesDecimal() {
-
-    final Map<String, Object> props = new HashMap<String, Object>();
-    // Create 4 test docs
-    props.put(TEST_CMIS_PROPERY_SINGLE_DOUBLE, 1.0);
-    createTestCMISDocument(testRootFolder, "test1", props);
-
-    props.put(TEST_CMIS_PROPERY_SINGLE_DOUBLE, 1.1);
-    createTestCMISDocument(testRootFolder, "test2", props);
-
-    props.put(TEST_CMIS_PROPERY_SINGLE_DOUBLE, 1.2);
-    createTestCMISDocument(testRootFolder, "test3", props);
-
-    props.put(TEST_CMIS_PROPERY_SINGLE_DOUBLE, 1.3);
-    createTestCMISDocument(testRootFolder, "test4", props);
-
-    final String equalsQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
-      + " where in_folder('%s') and "
-      + TEST_CMIS_PROPERY_SINGLE_DOUBLE + " =  1.0";
-    assertEquals("Wrong result count", 1,
-      queryResultCount(String.format(equalsQuery, testRootFolder.getId()), false));
-
-    final String notEqualsQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
-      + " where in_folder('%s') and "
-      + TEST_CMIS_PROPERY_SINGLE_DOUBLE + " <>  1.0";
-    assertEquals("Wrong result count", 3,
-      queryResultCount(String.format(notEqualsQuery, testRootFolder.getId()), false));
-
-
-    final String lessThanQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
-      + " where in_folder('%s') and "
-      + TEST_CMIS_PROPERY_SINGLE_DOUBLE + " <  1.2";
-    assertEquals("Wrong result count", 2,
-      queryResultCount(String.format(lessThanQuery, testRootFolder.getId()), false));
-
-    final String lessThanOrEqualToQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
-      + " where in_folder('%s') and "
-      + TEST_CMIS_PROPERY_SINGLE_DOUBLE + "<=  1.2";
-    assertEquals(
-      "Wrong result count",
-      3,
-      queryResultCount(String.format(lessThanOrEqualToQuery, testRootFolder.getId()),
-        false));
-
-    final String greaterThanQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
-      + " where in_folder('%s') and "
-      + TEST_CMIS_PROPERY_SINGLE_DOUBLE + " >  1.0";
-    assertEquals("Wrong result count", 3,
-      queryResultCount(String.format(greaterThanQuery, testRootFolder.getId()), false));
-
-    final String greaterThanOrEqualToQuery = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
-      + " where in_folder('%s') and "
-      + TEST_CMIS_PROPERY_SINGLE_DOUBLE + " >=  1.0";
-
-    assertEquals(
-      "Wrong result count",
-      4,
-      queryResultCount(String.format(greaterThanOrEqualToQuery, testRootFolder.getId()),
-        false));
-  }
-
-  @Test
-  public void comparisonPredicatesBoolean() {
-
-    final Map<String, Object> props = new HashMap<String, Object>();
-    // Create 2 test docs with true and false
-    props.put(TEST_CMIS_PROPERY_SINGLE_BOOLEAN, true);
-    createTestCMISDocument(testRootFolder, "test1", props);
-
-    props.put(TEST_CMIS_PROPERY_SINGLE_BOOLEAN, false);
-    createTestCMISDocument(testRootFolder, "test2", props);
-
-    final String[] testVals = { "true", "TRUE", "false", "FALSE" };
-    for (final String val: testVals) {
-      final String query = "SELECT * from " + TEST_CMIS_DOCUMENT_TYPE
-        + " where in_folder('%s') and "
-        + TEST_CMIS_PROPERY_SINGLE_BOOLEAN + " =  %s";
-
-      assertEquals("Wrong result count", 1,
-        queryResultCount(String.format(query, testRootFolder.getId(), val), false));
-
-    }
-  }
-
+  /**
+   * @param query
+   * @param searchAllVersions
+   * @return The total number of items found by the query
+   */
   private long queryResultCount(final String query, final boolean searchAllVersions) {
     return executeQuery(query, searchAllVersions).getTotalNumItems();
   }
 
+  /**
+   * 
+   * @param query
+   * @param searchAllVersions
+   * @return The query results
+   */
   private ItemIterable<QueryResult> executeQuery(final String query, final boolean searchAllVersions) {
     System.out.println("Executing query " + query + " (Searching all versions: "
       + searchAllVersions + ")");
@@ -353,19 +371,19 @@ public class CMISTest {
   }
 
   /**
-   * Create a new child document of type cmis:document
+   * Helper method to test predicate queries
    * 
-   * @param parent
-   *          The parent folder
-   * @param name
-   *          The name of the new folder
-   * @return
+   * @param queryTemplate
+   *          - A query with parameters which are resolvable via String.format
+   * 
+   * @param expectedResultCount
+   * @param values
    */
-  private Document createNamedDocument(final Folder parent, final String name) {
-    final Map<String, String> props = new HashMap<String, String>();
-    props.put(PropertyIds.NAME, name);
-    props.put(PropertyIds.OBJECT_TYPE_ID, BaseTypeId.CMIS_DOCUMENT.value());
-    return parent.createDocument(props, null, null);
+  private void testPredicate(final String queryTemplate, final int expectedResultCount,
+    final Object... values) {
+
+    assertEquals("Wrong result count", expectedResultCount,
+      queryResultCount(String.format(queryTemplate, values), false));
   }
 
   private Document createTestCMISDocument(final Folder parent, final String name,
@@ -373,7 +391,7 @@ public class CMISTest {
 
     props.put(PropertyIds.NAME, name);
     props.put(PropertyIds.OBJECT_TYPE_ID, "D:" + TEST_CMIS_DOCUMENT_TYPE);
-    System.out.println("Creating new doc " + props);
+    System.out.println("Creating new doc in parent folder " + parent.getId() + " " + props);
     return parent.createDocument(props, null, null);
   }
 }

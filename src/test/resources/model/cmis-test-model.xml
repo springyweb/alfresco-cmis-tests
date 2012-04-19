@@ -20,6 +20,9 @@
 			<title>Cmis Test Document</title>
 			<parent>cm:content</parent>
 			<properties>
+				<property name="swct:propSingleString">
+					<type>d:text</type>
+				</property>
 				<property name="swct:propSingleInt">
 					<type>d:int</type>
 				</property>
