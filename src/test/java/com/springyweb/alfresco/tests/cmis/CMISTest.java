@@ -2,11 +2,13 @@ package com.springyweb.alfresco.tests.cmis;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -45,6 +47,7 @@ public class CMISTest {
   private static final String TEST_CMIS_PROPERY_SINGLE_DATE_TIME = "swct:propSingleDateTime";
   private static final String TEST_CMIS_PROPERY_SINGLE_STRING = "swct:propSingleString";
 
+  private static final String TEST_CMIS_PROPERY_MULTIPLE_STRING = "swct:propMultipleString";
 
   // Note the replaceable parameters here are (in order) folder id,property,predicate,value
   // e.g SELECT * from swct:document where in_folder('workspace://SpacesStore/c22f856c-6cec-4e16-9c1c-60df621bba16') and swct:propSingleString = 'b'
@@ -71,6 +74,11 @@ public class CMISTest {
   // SELECT * from swct:document where in_folder('workspace://SpacesStore/c22f856c-6cec-4e16-9c1c-60df621bba16') and swct:propSingleBoolean IS NULL
   private static final String NULL_PREDICATE_QUERY_TEMPLATE_STRING = "SELECT * from "
     + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %s %s";
+
+  // e.g SELECT * from swct:document where in_folder('workspace://SpacesStore/c22f856c-6cec-4e16-9c1c-60df621bba16') and 'foo' = ANY
+  // swct:propSingleBoolean
+  private static final String PREDICATE_QUANTIFIED_QUERY_TEMPLATE_STRING = "SELECT * from "
+    + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and '%s' %s %s";
 
 
   private Folder root = null;
@@ -419,6 +427,25 @@ public class CMISTest {
     testPredicateQuerySingleResult(NULL_PREDICATE_QUERY_TEMPLATE_STRING, idWithPropertySet,
       testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_BOOLEAN, Predicate.IS_NOT_NULL.getSymbol());
+  }
+
+  /**
+   * The quantified comparison predicate only applies to multi-valued properties: it can not be used for single valued properties. Only the equality
+   * operator is supported. The only quantifier supported is ANY (ALL and SOME are not supported).
+   */
+  @Test
+  public void testQuantifiedComparisonPredicate() {
+
+    final List<String> values = Arrays.asList(new String[] { "foo", "bar", "baz" });
+    final Map<String, Object> props = new HashMap<String, Object>();
+    props.put(TEST_CMIS_PROPERY_MULTIPLE_STRING, values);
+
+    final String expectedId = createTestCMISDocument(testRootFolder, "test", props).getId();
+    for (final String value: values) {
+      testPredicateQuerySingleResult(PREDICATE_QUANTIFIED_QUERY_TEMPLATE_STRING, expectedId,
+        testRootFolder.getId(),
+        value, Predicate.QUANTIFIED_COMPARISION.getSymbol(), TEST_CMIS_PROPERY_MULTIPLE_STRING);
+    }
   }
 
   /**

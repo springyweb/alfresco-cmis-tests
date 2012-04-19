@@ -38,6 +38,10 @@
 				<property name="swct:propSingleDateTime">
 					<type>d:datetime</type>
 				</property>
+				<property name="swct:propMultipleString">
+					<type>d:text</type>
+					<multiple>true</multiple>
+				</property>
 			</properties>
 			<associations>
 				<association name="swct:assocManyToManyOpt">

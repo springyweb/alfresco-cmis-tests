@@ -18,7 +18,8 @@ public enum Predicate {
   IN("IN"),
   LIKE("LIKE"),
   IS_NOT_NULL("IS NOT NULL"),
-  IS_NULL("IS NULL");
+  IS_NULL("IS NULL"),
+  QUANTIFIED_COMPARISION("= ANY");
 
   private String symbol;
 
