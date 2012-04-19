@@ -97,6 +97,10 @@ public class CMISTest {
   private static final String PREDICATE_QUANTIFIED_QUERY_TEMPLATE_DATETIME = "SELECT * from "
     + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and TIMESTAMP '%s' %s %s";
 
+  // e.g SELECT * from swct:document WHERE ANY swct:propSingleBoolean IN (true, false)
+  private static final String PREDICATE_QUANTIFIED_IN_TEMPLATE_STRING = "SELECT * from "
+    + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and " + Predicate.ANY + " %s "
+    + Predicate.IN + "%s";
 
   private Folder root = null;
   private Folder testRootFolder = null;
@@ -446,10 +450,6 @@ public class CMISTest {
       TEST_CMIS_PROPERY_SINGLE_BOOLEAN, Predicate.IS_NOT_NULL.getSymbol());
   }
 
-  /**
-   * The quantified comparison predicate only applies to multi-valued properties: it can not be used for single valued properties. Only the equality
-   * operator is supported. The only quantifier supported is ANY (ALL and SOME are not supported).
-   */
   @Test
   public void testQuantifiedComparisonPredicateString() {
 
@@ -515,6 +515,20 @@ public class CMISTest {
       TEST_CMIS_PROPERY_MULTIPLE_DATE_TIME);
   }
 
+  /**
+   * The quantified comparison predicate only applies to multi-valued properties: it can not be used for single valued properties. Only the equality
+   * operator is supported. The only quantifier supported is ANY (ALL and SOME are not supported).
+   * 
+   * @param props
+   *          - properties to add to the created test document
+   * @param testValues
+   *          - a list of values which will all be queried for
+   * @param queryTemplate
+   *          - The name of the quey template
+   * @param propertyName
+   *          - The property name being tested
+   * 
+   */
   private void testQuantifiedComparisonPredicate(final Map<String, Object> props,
     final List<Object> testValues, final String queryTemplate, final String propertyName) {
 
@@ -526,13 +540,125 @@ public class CMISTest {
     }
   }
 
+  @Test
+  public void testQuantifiedInPredicateString() {
+
+    final List<Object> propertyValues = new ArrayList<Object>();
+    propertyValues.add("foo");
+    propertyValues.add("bar");
+    propertyValues.add("baz");
+
+    final Map<String, Object> props = new HashMap<String, Object>();
+    props.put(TEST_CMIS_PROPERY_MULTIPLE_STRING, propertyValues);
+
+    final Set<Object> searchValues = new HashSet<Object>();
+    searchValues.addAll(propertyValues);
+    // Note we add a value that isn't part of the property as the predicate should match if ANY values match not ALL.
+    searchValues.add("springy");
+
+    testQuantifiedInPredicate(props, bracketAndDelimit(searchValues, true),
+      TEST_CMIS_PROPERY_MULTIPLE_STRING);
+  }
+
+  @Test
+  public void testQuantifiedInPredicateInteger() {
+
+    final List<Object> propertyValues = new ArrayList<Object>();
+    propertyValues.add(1);
+    propertyValues.add(2);
+    propertyValues.add(3);
+
+    final Map<String, Object> props = new HashMap<String, Object>();
+    props.put(TEST_CMIS_PROPERY_MULTIPLE_INT, propertyValues);
+
+    final Set<Object> searchValues = new HashSet<Object>();
+    searchValues.addAll(propertyValues);
+    // Note we add a value that isn't part of the property as the predicate should match if ANY values match not ALL.
+    searchValues.add(99);
+
+    testQuantifiedInPredicate(props, bracketAndDelimit(searchValues, false),
+      TEST_CMIS_PROPERY_MULTIPLE_INT);
+  }
+
+  @Test
+  public void testQuantifiedInPredicateDouble() {
+
+    final List<Object> propertyValues = new ArrayList<Object>();
+    propertyValues.add(1.1);
+    propertyValues.add(2.3);
+    propertyValues.add(3.1);
+
+    final Map<String, Object> props = new HashMap<String, Object>();
+    props.put(TEST_CMIS_PROPERY_MULTIPLE_DOUBLE, propertyValues);
+
+    final Set<Object> searchValues = new HashSet<Object>();
+    searchValues.addAll(propertyValues);
+    // Note we add a value that isn't part of the property as the predicate should match if ANY values match not ALL.
+    searchValues.add(99.2);
+
+    testQuantifiedInPredicate(props, bracketAndDelimit(searchValues, false),
+      TEST_CMIS_PROPERY_MULTIPLE_DOUBLE);
+  }
+
+  @Test
+  public void testQuantifiedInPredicateBoolean() {
+
+    final List<Object> propertyValues = new ArrayList<Object>();
+    propertyValues.add(true);
+
+    final Map<String, Object> props = new HashMap<String, Object>();
+    props.put(TEST_CMIS_PROPERY_MULTIPLE_BOOLEAN, propertyValues);
+
+    final Set<Object> searchValues = new HashSet<Object>();
+    searchValues.addAll(propertyValues);
+    // Note we add a value that isn't part of the property as the predicate should match if ANY values match not ALL.
+    searchValues.add(false);
+    searchValues.add("FALSE");
+
+    testQuantifiedInPredicate(props, bracketAndDelimit(searchValues, false),
+      TEST_CMIS_PROPERY_MULTIPLE_BOOLEAN);
+  }
+
+  @Test
+  public void testQuantifiedInPredicateDateTime() {
+
+    final List<Object> propertyValues = new ArrayList<Object>();
+    final GregorianCalendar cal = new GregorianCalendar();
+    propertyValues.add(cal.clone());
+    cal.add(Calendar.YEAR, 1);
+    propertyValues.add(cal.clone());
+
+    final Map<String, Object> props = new HashMap<String, Object>();
+    props.put(TEST_CMIS_PROPERY_MULTIPLE_DATE_TIME, propertyValues);
+
+    final Set<Object> searchValues = new HashSet<Object>();
+    for (final Object object: propertyValues) {
+      searchValues.add(ISO8601DateFormat.format(((GregorianCalendar)object).getTime()));
+    }
+
+    // Note we add a value that isn't part of the property as the predicate should match if ANY values match not ALL.
+    cal.add(Calendar.YEAR, 50);
+    searchValues.add((ISO8601DateFormat.format(cal.getTime())));
+
+    testQuantifiedInPredicate(props, bracketAndDelimit(searchValues, true),
+      TEST_CMIS_PROPERY_MULTIPLE_DATE_TIME);
+  }
+
+  private void testQuantifiedInPredicate(final Map<String, Object> props,
+    final String predicateValues, final String propertyName) {
+
+    final String expectedId = createTestCMISDocument(testRootFolder, "test", props).getId();
+    testPredicateQuerySingleResult(PREDICATE_QUANTIFIED_IN_TEMPLATE_STRING, expectedId,
+        testRootFolder.getId(), propertyName, predicateValues);
+  }
+
   /**
    * 
    * @param values
    *          e.g {"bar", "baz"}
    * @return ('bar','baz')
    */
-  private String buildInStringValues(final Set<Object> values, final boolean quoteElements) {
+  private String bracketAndDelimit(final Set<Object> values, final boolean quoteElements) {
     String separatedValues = "";
     if (quoteElements) {
       separatedValues = StringUtils.join(quoteValues(values).toArray(), ",");
@@ -702,7 +828,7 @@ public class CMISTest {
     final ItemIterable<QueryResult> predicateQueryResults = getPredicateQueryResults(
       PREDICATE_QUERY_TEMPLATE_UNQUOTED_STRING, 1, testRootFolder.getId(),
       propertyName,
-      Predicate.IN.getSymbol(), buildInStringValues(searchTokens, quoteElements));
+      Predicate.IN.getSymbol(), bracketAndDelimit(searchTokens, quoteElements));
 
     // Compare the expected string with the actual strings
     final Set<String> actualIds = new HashSet<String>();
