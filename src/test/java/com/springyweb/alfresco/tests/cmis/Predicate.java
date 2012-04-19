@@ -16,6 +16,7 @@ public enum Predicate {
   LESS_THAN("<"),
   LESS_THAN_EQUAL_TO("<="),
   IN("IN"),
+  ANY("ANY"),
   LIKE("LIKE"),
   IS_NOT_NULL("IS NOT NULL"),
   IS_NULL("IS NULL"),

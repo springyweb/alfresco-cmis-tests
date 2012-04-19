@@ -46,6 +46,22 @@
 					<type>d:int</type>
 					<multiple>true</multiple>
 				</property>
+				<property name="swct:propMultipleDouble">
+					<type>d:double</type>
+					<multiple>true</multiple>
+				</property>
+				<property name="swct:propMultipleBoolean">
+					<type>d:boolean</type>
+					<multiple>true</multiple>
+				</property>
+				<property name="swct:propMultipleDate">
+					<type>d:date</type>
+					<multiple>true</multiple>
+				</property>
+				<property name="swct:propMultipleDateTime">
+					<type>d:datetime</type>
+					<multiple>true</multiple>
+				</property>
 			</properties>
 			<associations>
 				<association name="swct:assocManyToManyOpt">

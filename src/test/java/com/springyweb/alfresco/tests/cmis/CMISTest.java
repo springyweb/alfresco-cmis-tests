@@ -2,6 +2,7 @@ package com.springyweb.alfresco.tests.cmis;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
@@ -49,6 +50,9 @@ public class CMISTest {
 
   private static final String TEST_CMIS_PROPERY_MULTIPLE_STRING = "swct:propMultipleString";
   private static final String TEST_CMIS_PROPERY_MULTIPLE_INT = "swct:propMultipleInt";
+  private static final String TEST_CMIS_PROPERY_MULTIPLE_DOUBLE = "swct:propMultipleDouble";
+  private static final String TEST_CMIS_PROPERY_MULTIPLE_BOOLEAN = "swct:propMultipleBoolean";
+  private static final String TEST_CMIS_PROPERY_MULTIPLE_DATE_TIME = "swct:propMultipleDateTime";
 
   // Note the replaceable parameters here are (in order) folder id,property,predicate,value
   // e.g SELECT * from swct:document where in_folder('workspace://SpacesStore/c22f856c-6cec-4e16-9c1c-60df621bba16') and swct:propSingleString = 'b'
@@ -83,6 +87,15 @@ public class CMISTest {
 
   private static final String PREDICATE_QUANTIFIED_QUERY_TEMPLATE_INTEGER = "SELECT * from "
     + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %d %s %s";
+
+  private static final String PREDICATE_QUANTIFIED_QUERY_TEMPLATE_BOOLEAN = "SELECT * from "
+    + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %b %s %s";
+
+  private static final String PREDICATE_QUANTIFIED_QUERY_TEMPLATE_DECIMAL = "SELECT * from "
+    + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %.2g%n %s %s";
+
+  private static final String PREDICATE_QUANTIFIED_QUERY_TEMPLATE_DATETIME = "SELECT * from "
+    + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and TIMESTAMP '%s' %s %s";
 
 
   private Folder root = null;
@@ -440,30 +453,76 @@ public class CMISTest {
   @Test
   public void testQuantifiedComparisonPredicateString() {
 
-    final List<String> values = Arrays.asList(new String[] { "foo", "bar", "baz" });
+    final List<Object> values = Arrays.asList(new Object[] { "foo", "bar", "baz" });
     final Map<String, Object> props = new HashMap<String, Object>();
     props.put(TEST_CMIS_PROPERY_MULTIPLE_STRING, values);
 
-    final String expectedId = createTestCMISDocument(testRootFolder, "test", props).getId();
-    for (final String value: values) {
-      testPredicateQuerySingleResult(PREDICATE_QUANTIFIED_QUERY_TEMPLATE_STRING, expectedId,
-        testRootFolder.getId(),
-        value, Predicate.QUANTIFIED_COMPARISION.getSymbol(), TEST_CMIS_PROPERY_MULTIPLE_STRING);
-    }
+    testQuantifiedComparisonPredicate(props, values, PREDICATE_QUANTIFIED_QUERY_TEMPLATE_STRING,
+      TEST_CMIS_PROPERY_MULTIPLE_STRING);
   }
 
   @Test
   public void testQuantifiedComparisonPredicateInteger() {
 
-    final List<Integer> values = Arrays.asList(new Integer[] { 1, 2, 3 });
+    final List<Object> values = Arrays.asList(new Object[] { 1, 2, 3 });
     final Map<String, Object> props = new HashMap<String, Object>();
     props.put(TEST_CMIS_PROPERY_MULTIPLE_INT, values);
 
+    testQuantifiedComparisonPredicate(props, values, PREDICATE_QUANTIFIED_QUERY_TEMPLATE_INTEGER,
+      TEST_CMIS_PROPERY_MULTIPLE_INT);
+  }
+
+  @Test
+  public void testQuantifiedComparisonPredicateBoolean() {
+
+    final List<Object> values = Arrays.asList(new Object[] { true, false });
+    final Map<String, Object> props = new HashMap<String, Object>();
+    props.put(TEST_CMIS_PROPERY_MULTIPLE_BOOLEAN, values);
+
+    testQuantifiedComparisonPredicate(props, values, PREDICATE_QUANTIFIED_QUERY_TEMPLATE_BOOLEAN,
+      TEST_CMIS_PROPERY_MULTIPLE_BOOLEAN);
+  }
+
+  @Test
+  public void testQuantifiedComparisonPredicateDouble() {
+
+    final List<Object> values = Arrays.asList(new Object[] { 1.2, 3.1 });
+    final Map<String, Object> props = new HashMap<String, Object>();
+    props.put(TEST_CMIS_PROPERY_MULTIPLE_DOUBLE, values);
+
+    testQuantifiedComparisonPredicate(props, values, PREDICATE_QUANTIFIED_QUERY_TEMPLATE_DECIMAL,
+      TEST_CMIS_PROPERY_MULTIPLE_DOUBLE);
+  }
+
+  @Test
+  public void testQuantifiedComparisonPredicateDateTime() {
+
+    final List<GregorianCalendar> storeValues = new ArrayList<GregorianCalendar>();
+    final List<Object> searchValues = new ArrayList<Object>();
+
+    final GregorianCalendar cal = new GregorianCalendar();
+    storeValues.add((GregorianCalendar)cal.clone());
+    searchValues.add(ISO8601DateFormat.format(cal.getTime()));
+    cal.add(Calendar.MILLISECOND, 1);
+    storeValues.add((GregorianCalendar)cal.clone());
+    searchValues.add(ISO8601DateFormat.format(cal.getTime()));
+
+    final Map<String, Object> props = new HashMap<String, Object>();
+    props.put(TEST_CMIS_PROPERY_MULTIPLE_DATE_TIME, storeValues);
+
+    testQuantifiedComparisonPredicate(props, searchValues,
+      PREDICATE_QUANTIFIED_QUERY_TEMPLATE_DATETIME,
+      TEST_CMIS_PROPERY_MULTIPLE_DATE_TIME);
+  }
+
+  private void testQuantifiedComparisonPredicate(final Map<String, Object> props,
+    final List<Object> testValues, final String queryTemplate, final String propertyName) {
+
     final String expectedId = createTestCMISDocument(testRootFolder, "test", props).getId();
-    for (final Integer value: values) {
-      testPredicateQuerySingleResult(PREDICATE_QUANTIFIED_QUERY_TEMPLATE_INTEGER, expectedId,
+    for (final Object value: testValues) {
+      testPredicateQuerySingleResult(queryTemplate, expectedId,
         testRootFolder.getId(),
-        value, Predicate.QUANTIFIED_COMPARISION.getSymbol(), TEST_CMIS_PROPERY_MULTIPLE_INT);
+        value, Predicate.QUANTIFIED_COMPARISION.getSymbol(), propertyName);
     }
   }
 
