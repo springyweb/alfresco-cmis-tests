@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -25,11 +26,13 @@ import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.client.runtime.SessionFactoryImpl;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.SessionParameter;
+import org.apache.chemistry.opencmis.commons.data.ContentStream;
 import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
 import org.apache.chemistry.opencmis.commons.enums.BindingType;
 import org.apache.chemistry.opencmis.commons.enums.UnfileObject;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisObjectNotFoundException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisRuntimeException;
+import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -75,10 +78,15 @@ public class CMISTest {
   private static final String PREDICATE_QUERY_TEMPLATE_UNQUOTED_STRING = "SELECT * from "
     + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %s %s %s";
 
-  // Note the replaceable parameters here are (in order) folder id,property,predicate,value
+  // Note the replaceable parameters here are (in order) folder id,sting1,string2
   // SELECT * from swct:document where in_folder('workspace://SpacesStore/c22f856c-6cec-4e16-9c1c-60df621bba16') and swct:propSingleBoolean IS NULL
-  private static final String NULL_PREDICATE_QUERY_TEMPLATE_STRING = "SELECT * from "
+  private static final String TWO_VAL_PREDICATE_QUERY_TEMPLATE_STRING = "SELECT * from "
     + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %s %s";
+
+  // Note the replaceable parameters here are (in order) folder id,string1
+  // SELECT * from swct:document where in_folder('workspace://SpacesStore/c22f856c-6cec-4e16-9c1c-60df621bba16') and CONTAINS('foo')
+  private static final String SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING = "SELECT * from "
+    + TEST_CMIS_DOCUMENT_TYPE + " where in_folder('%s') and %s";
 
   // e.g SELECT * from swct:document where in_folder('workspace://SpacesStore/c22f856c-6cec-4e16-9c1c-60df621bba16') and 'foo' = ANY
   // swct:propSingleBoolean
@@ -440,12 +448,12 @@ public class CMISTest {
       .getId();
 
     // Test for the item without the property set using IS NULL
-    testPredicateQuerySingleResult(NULL_PREDICATE_QUERY_TEMPLATE_STRING, idWithoutPropertySet,
+    testPredicateQuerySingleResult(TWO_VAL_PREDICATE_QUERY_TEMPLATE_STRING, idWithoutPropertySet,
       testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_BOOLEAN, Predicate.IS_NULL.getSymbol());
 
     // Test for the item with the property set using IS NOT NULL
-    testPredicateQuerySingleResult(NULL_PREDICATE_QUERY_TEMPLATE_STRING, idWithPropertySet,
+    testPredicateQuerySingleResult(TWO_VAL_PREDICATE_QUERY_TEMPLATE_STRING, idWithPropertySet,
       testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_BOOLEAN, Predicate.IS_NOT_NULL.getSymbol());
   }
@@ -642,6 +650,95 @@ public class CMISTest {
 
     testQuantifiedInPredicate(props, bracketAndDelimit(searchValues, true),
       TEST_CMIS_PROPERY_MULTIPLE_DATE_TIME);
+  }
+
+  @Test
+  public void testContainsPredicate() {
+    final Map<String, Object> props = new HashMap<String, Object>();
+    final String testDocumentId = createTestCMISDocument(testRootFolder, "test", props, "test")
+      .getId();
+    final String tubeDocumentId = createTestCMISDocument(testRootFolder, "tube", props, "tube")
+      .getId();
+    final String testTubeDocumentId = createTestCMISDocument(testRootFolder, "testTube", props,
+      "test tube").getId();
+    final String tubeTestDocumentId = createTestCMISDocument(testRootFolder, "tubeTest", props,
+      "tube test").getId();
+
+    // term
+    Set<String> expectedIds = toSet(testDocumentId, testTubeDocumentId, tubeTestDocumentId);
+    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+      testRootFolder.getId(), buildContains("test"));
+
+    // term AND (default)
+    expectedIds = toSet(testTubeDocumentId, tubeTestDocumentId);
+    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+      testRootFolder.getId(), buildContains("test tube"));
+
+    // term OR
+    expectedIds = toSet(testDocumentId, tubeDocumentId, testTubeDocumentId, tubeTestDocumentId);
+    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+      testRootFolder.getId(), buildContains("test OR tube"));
+
+    // negation precedence over OR - Note This does NOT mean find all documents without "test" and then from those find all those with "tube"
+    // compare with bracketed negation OR terms below
+    expectedIds = toSet(tubeDocumentId, testTubeDocumentId, tubeTestDocumentId);
+    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+      testRootFolder.getId(), buildContains("-test OR tube"));
+
+    // bracketed negation OR terms,
+    expectedIds = Collections.emptySet();
+    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+      testRootFolder.getId(), buildContains("-(test OR tube)"));
+
+    // Phrase
+    expectedIds = toSet(testTubeDocumentId);
+    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+      testRootFolder.getId(), buildContainsPhrase("test tube"));
+
+    // negated term
+    expectedIds = toSet(tubeDocumentId);
+    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+      testRootFolder.getId(), buildContains("-test"));
+
+    // negated phrase
+    expectedIds = toSet(testDocumentId, tubeDocumentId, tubeTestDocumentId);
+    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+      testRootFolder.getId(), buildContainsNegatedPhrase("test tube"));
+
+  }
+
+  private String buildContains(final String s) {
+    return buildContains(s, false, false);
+  }
+
+  private String buildContainsPhrase(final String s) {
+    return buildContains(s, true, false);
+  }
+
+  private String buildContainsNegatedPhrase(final String s) {
+    return buildContains(s, true, true);
+  }
+
+  private String buildContains(final String s, final boolean isPhrase, final boolean negate) {
+    final StringBuilder sb = new StringBuilder(Predicate.CONTAINS.getSymbol()).append("('");
+    sb.append(isPhrase ? escape(s, negate) : s);
+    sb.append("')");
+    return sb.toString();
+  }
+
+  private String escape(final String s, final boolean negate) {
+    final StringBuilder sb = new StringBuilder();
+    if (negate) {
+      sb.append("-");
+    }
+    sb.append("\\'").append(s).append("\\'");
+    return sb.toString();
+  }
+
+  private Set<String> toSet(final String... strings) {
+    final Set<String> setOfStrings = new HashSet<String>(strings.length);
+    setOfStrings.addAll(Arrays.asList(strings));
+    return setOfStrings;
   }
 
   /**
@@ -855,6 +952,14 @@ public class CMISTest {
     assertEquals(expectedIds, actualIds);
   }
 
+  /**
+   * @param queryTemplate
+   *          - The name of a query template
+   * @param expectedId
+   *          - The object id of the single result expected
+   * @param values
+   *          - The values to replace in the template.
+   */
   private void testPredicateQuerySingleResult(final String queryTemplate,
     final String expectedId, final Object... values) {
 
@@ -863,10 +968,33 @@ public class CMISTest {
 
     assertEquals("Wrong result count", 1, results.getTotalNumItems());
     final String actualId = (String)results.iterator().next()
-      .getPropertyById(PropertyIds.OBJECT_ID).getFirstValue();
+      .getPropertyValueById(PropertyIds.OBJECT_ID);
     assertEquals("Wrong id found", expectedId, actualId);
-
   }
+
+  /**
+   * @param queryTemplate
+   *          - The name of a query template
+   * @param expectedId
+   *          - The object id of the single result expected
+   * @param values
+   *          - The values to replace in the template.
+   */
+  private void testPredicateQueryResults(final String queryTemplate,
+    final Set<String> expectedIds, final Object... values) {
+
+    final Set<String> actualIds = new HashSet<String>();
+
+    final ItemIterable<QueryResult> results = executeQuery(
+      String.format(queryTemplate, values), false);
+
+    assertEquals("Wrong result count", expectedIds.size(), results.getTotalNumItems());
+    for (final QueryResult result: results) {
+      actualIds.add((String)result.getPropertyValueById(PropertyIds.OBJECT_ID));
+    }
+    assertEquals("Result ids do not match expected values", expectedIds, actualIds);
+  }
+
 
   private ItemIterable<QueryResult> getPredicateQueryResults(final String queryTemplate,
     final int expectedResultCount,
@@ -899,8 +1027,19 @@ public class CMISTest {
   private Document createTestCMISDocument(final Folder parent, final String name,
     final Map<String, Object> props) {
 
+    return createTestCMISDocument(parent, name, props, null);
+  }
+
+  private Document createTestCMISDocument(final Folder parent, final String name,
+    final Map<String, Object> props, final String content) {
+
+    ContentStream contentStream = null;
+    if (content != null) {
+      contentStream = new ContentStreamImpl("test", "text/plain", content);
+    }
+
     props.put(PropertyIds.NAME, name);
     props.put(PropertyIds.OBJECT_TYPE_ID, "D:" + TEST_CMIS_DOCUMENT_TYPE);
-    return parent.createDocument(props, null, null);
+    return parent.createDocument(props, contentStream, null);
   }
 }

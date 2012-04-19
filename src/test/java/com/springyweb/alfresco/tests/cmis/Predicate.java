@@ -18,6 +18,7 @@ public enum Predicate {
   IN("IN"),
   ANY("ANY"),
   LIKE("LIKE"),
+  CONTAINS("CONTAINS"),
   IS_NOT_NULL("IS NOT NULL"),
   IS_NULL("IS NULL"),
   QUANTIFIED_COMPARISION("= ANY");
