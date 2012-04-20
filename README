@@ -1,11 +1,20 @@
 This project is simply a set of unit tests deisgned to run against an Alfresco > 3.3.x repository.
-It was put together as a CMIS/OpenCmis learning exercise.
+
+It was put together as a CMIS/OpenCmis/"Alfresco OpenCMIS Extension" learning exercise.
 
 Note: These tests both create content and then search for it. The eventual consistency offered by the solr indexing subsystem is not suitable for this kind of test.
 
+--Environment setup
+
+#Install maven
+
+Note: This has been tested with maven 3.0.2
+
+#Ensure that the lucence subsystem is being used for indexing
+
 Therefore ensure that you set lucene as the indexing subsystem before running these tests.  
 
-To do this ensure theat the following property is set in alfresco-global.properties.
+To do this ensure thea the following property is set in alfresco-global.properties.
 
 index.subsystem.name=lucene 
 
@@ -13,12 +22,15 @@ and not
 
 index.subsystem.name=solr
 
+#Configure the DateTime analyzer
+Note: For the datetime tests to work follow the instructions for changing the lucene analyzer (http://wiki.alfresco.com/wiki/CMIS_Query_Language#Configuring_DateTime_resolution)
+
+#Deploy the custom content model
+Dynamically deploy the custom model from src/test/resources/model/cmis-test-model.xml (Follow http://wiki.alfresco.com/wiki/Dynamic_Models#Deploying_and_activating_a_custom_model)
+
 ----Running the tests ----
 
 By default it expects Alfresco running locally on port 8080 with the default admin/admin credentials.
-With the Alfresco server running. 
-
-Dynamically deploy the custom model from src/test/resources/model/cmis-test-model.xml (Follow http://wiki.alfresco.com/wiki/Dynamic_Models#Deploying_and_activating_a_custom_model)
-Note: For the datetime tests to work follow the instructions for changing the lucene analyzer (http://wiki.alfresco.com/wiki/CMIS_Query_Language#Configuring_DateTime_resolution)
+With the Alfresco server running run: 
 
 mvn clean test
