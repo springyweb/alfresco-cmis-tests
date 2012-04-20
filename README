@@ -1,6 +1,18 @@
 This project is simply a set of unit tests deisgned to run against an Alfresco > 3.3.x repository.
 It was put together as a CMIS/OpenCmis learning exercise.
 
+Note: These tests both create content and then search for it. The eventual consistency offered by the solr indexing subsystem is not suitable for this kind of test.
+
+Therefore ensure that you set lucene as the indexing subsystem before running these tests.  
+
+To do this ensure theat the following property is set in alfresco-global.properties.
+
+index.subsystem.name=lucene 
+
+and not
+
+index.subsystem.name=solr
+
 ----Running the tests ----
 
 By default it expects Alfresco running locally on port 8080 with the default admin/admin credentials.

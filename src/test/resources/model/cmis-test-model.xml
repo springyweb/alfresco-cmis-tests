@@ -9,6 +9,7 @@
 	<imports>
 		<import uri="http://www.alfresco.org/model/dictionary/1.0" prefix="d" />
 		<import uri="http://www.alfresco.org/model/content/1.0" prefix="cm" />
+		<import uri="http://www.alfresco.org/model/system/1.0" prefix="sys" />
 	</imports>
 
 	<namespaces>
@@ -16,8 +17,12 @@
 	</namespaces>
 
 	<types>
+		<type name="swct:folder">
+			<title>Test Folder</title>
+			<parent>cm:folder</parent>
+		</type>
 		<type name="swct:document">
-			<title>Cmis Test Document</title>
+			<title>Test Document</title>
 			<parent>cm:content</parent>
 			<properties>
 				<property name="swct:propSingleString">
@@ -63,23 +68,6 @@
 					<multiple>true</multiple>
 				</property>
 			</properties>
-			<associations>
-				<association name="swct:assocManyToManyOpt">
-					<title>Optional Many to Many Assoc</title>
-					<source>
-						<mandatory>false</mandatory>
-						<many>true</many>
-					</source>
-					<target>
-						<class>swct:document</class>
-						<mandatory>false</mandatory>
-						<many>true</many>
-					</target>
-				</association>
-			</associations>
-			<mandatory-aspects>
-			  <aspect>cm:generalclassifiable</aspect>
-			</mandatory-aspects>
 		</type>
 	</types>
 </model>

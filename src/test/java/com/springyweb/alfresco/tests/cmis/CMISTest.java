@@ -45,6 +45,8 @@ public class CMISTest {
 
   private static final String TEST_FOLDER_NAME = "test_folder";
   private static final String TEST_CMIS_DOCUMENT_TYPE = "swct:document";
+  private static final String TEST_CMIS_FOLDER_TYPE = "swct:folder";
+
   private static final String TEST_CMIS_PROPERY_SINGLE_INT = "swct:propSingleInt";
   private static final String TEST_CMIS_PROPERY_SINGLE_DOUBLE = "swct:propSingleDouble";
   private static final String TEST_CMIS_PROPERY_SINGLE_BOOLEAN = "swct:propSingleBoolean";
@@ -127,8 +129,10 @@ public class CMISTest {
     // Create a session with the client-side cache disabled.
     final SessionFactoryImpl sessionFactory = SessionFactoryImpl.newInstance();
     final Repository repository = sessionFactory.getRepositories(parameters).get(0);
+
     session = repository.createSession();
     session.getDefaultContext().setCacheEnabled(false);
+
     root = session.getRootFolder();
     // Create the test folder. Delete it if it already exists.
     testRootFolder = getFolderByPath(root.getPath() + TEST_FOLDER_NAME);
@@ -136,7 +140,7 @@ public class CMISTest {
       testRootFolder.deleteTree(true, UnfileObject.DELETE, true);
     }
 
-    testRootFolder = createNamedFolder(root, TEST_FOLDER_NAME);
+    testRootFolder = createTestCMISFolder(root, TEST_FOLDER_NAME);
 
   }
 
@@ -318,7 +322,21 @@ public class CMISTest {
       TEST_CMIS_PROPERY_SINGLE_DATE_TIME,
       Predicate.NOT_EQUALS.getSymbol(), ISO8601DateFormat.format(dates[0]));
 
-    // TODO: Add date inequality tests
+    testPredicate(PREDICATE_QUERY_TEMPLATE_DATETIME, 1, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_DATE_TIME,
+      Predicate.LESS_THAN.getSymbol(), ISO8601DateFormat.format(dates[1]));
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_DATETIME, 2, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_DATE_TIME,
+      Predicate.LESS_THAN_EQUAL_TO.getSymbol(), ISO8601DateFormat.format(dates[1]));
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_DATETIME, 3, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_DATE_TIME,
+      Predicate.GREATER_THAN.getSymbol(), ISO8601DateFormat.format(dates[0]));
+
+    testPredicate(PREDICATE_QUERY_TEMPLATE_DATETIME, 4, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_DATE_TIME,
+      Predicate.GREATER_THAN_EQUAL_TO.getSymbol(), ISO8601DateFormat.format(dates[0]));
   }
 
   @Test
@@ -810,26 +828,16 @@ public class CMISTest {
   @Test
   public void folderSearches() {
 
-    final String allFoldersByNameQuery = "SELECT * FROM cmis:folder WHERE cmis:name='%s'";
     final String allFoldersInFolderQuery = "SELECT * FROM cmis:folder WHERE in_folder('%s') and cmis:name='%s'";
     final String allFoldersInTreeQuery = "SELECT * FROM cmis:folder WHERE in_tree('%s') and cmis:name='%s'";
 
+    // Create two folders of the same name one beneath the other
     final String testFolderName = "my_test_folder";
-    final Folder testFolder = createNamedFolder(testRootFolder, testFolderName);
+    final Folder testFolder = createTestCMISFolder(testRootFolder, testFolderName);
+    createTestCMISFolder(testFolder, testFolderName);
 
-    // Check that only one folder with the search name can be found
-    assertEquals("Wrong result count", 1,
-      queryResultCount(String.format(allFoldersByNameQuery, testFolderName), false));
 
-    // Create a sub-folder folder of the same name
-    createNamedFolder(testFolder, testFolderName);
-
-    // Check that 2 folders with the search name can be found
-    assertEquals("Wrong result count", 2,
-      queryResultCount(String.format(allFoldersByNameQuery, testFolderName), false));
-
-    // Now search again this time limit the search to folders IMMEADIATELY
-    // within the test root space using in_folder
+    // Search IMMEADIATELY within the test root space using in_folder
 
     assertEquals(
       "Wrong result count",
@@ -868,22 +876,6 @@ public class CMISTest {
     } catch (final CmisObjectNotFoundException ignored) {
     }
     return folder;
-  }
-
-  /**
-   * Create a new child folder of type cmis:folder
-   * 
-   * @param parent
-   *          The parent folder
-   * @param name
-   *          The name of the new folder
-   * @return
-   */
-  private Folder createNamedFolder(final Folder parent, final String name) {
-    final Map<String, String> props = new HashMap<String, String>();
-    props.put(PropertyIds.NAME, name);
-    props.put(PropertyIds.OBJECT_TYPE_ID, BaseTypeId.CMIS_FOLDER.value());
-    return parent.createFolder(props);
   }
 
   /**
@@ -1021,7 +1013,7 @@ public class CMISTest {
   private ItemIterable<QueryResult> executeQuery(final String query, final boolean searchAllVersions) {
     System.out.println("Executing query " + query + " (Searching all versions: "
       + searchAllVersions + ")");
-    return session.query(query, false);
+    return session.query(query, searchAllVersions);
   }
 
   private Document createTestCMISDocument(final Folder parent, final String name,
@@ -1029,6 +1021,23 @@ public class CMISTest {
 
     return createTestCMISDocument(parent, name, props, null);
   }
+
+  /**
+   * Create a new child folder of type swct:folder
+   * 
+   * @param parent
+   *          The parent folder
+   * @param name
+   *          The name of the new folder
+   * @return
+   */
+  private Folder createTestCMISFolder(final Folder parent, final String name) {
+    final Map<String, String> props = new HashMap<String, String>();
+    props.put(PropertyIds.NAME, name);
+    props.put(PropertyIds.OBJECT_TYPE_ID, "F:" + TEST_CMIS_FOLDER_TYPE);
+    return parent.createFolder(props);
+  }
+
 
   private Document createTestCMISDocument(final Folder parent, final String name,
     final Map<String, Object> props, final String content) {
