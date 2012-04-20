@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.alfresco.cmis.client.AlfrescoDocument;
 import org.alfresco.util.ISO8601DateFormat;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Document;
@@ -46,6 +47,9 @@ public class CMISTest {
   private static final String TEST_FOLDER_NAME = "test_folder";
   private static final String TEST_CMIS_DOCUMENT_TYPE = "swct:document";
   private static final String TEST_CMIS_FOLDER_TYPE = "swct:folder";
+
+  private static final String ASPECT_TITLED = "cm:titled";
+  private static final String PROPERTY_DESCRIPTION = "cm:description";
 
   private static final String TEST_CMIS_PROPERY_SINGLE_INT = "swct:propSingleInt";
   private static final String TEST_CMIS_PROPERY_SINGLE_DOUBLE = "swct:propSingleDouble";
@@ -797,21 +801,49 @@ public class CMISTest {
   }
 
   /**
-   * START OF TESTS FOR ALFRESCO OPEN CMIS EXTENSION
+   * START OF TESTS FOR ALFRESCO OPEN CMIS EXTENSIONS
    * 
    */
 
   @Test
   public void createWithAspect() {
-    final Map<String, Object> properties = new HashMap<String, Object>();
-    properties.put(PropertyIds.NAME, "test");
-    properties.put(PropertyIds.OBJECT_TYPE_ID, documentPrefix(TEST_CMIS_DOCUMENT_TYPE)
-      + ",P:cm:titled");
-    properties.put("cm:description", "test description");
+    final Map<String, Object> props = new HashMap<String, Object>();
+    final String description = "test description";
 
-    final String expectedId = testRootFolder.createDocument(properties, null, null).getId();
-    final String query = "select d.*, t.* from  swct:document as d join cm:titled as t on d.cmis:objectid = t.cmis:objectid where t.cm:description = 'test description'";
-    assertQueryResults(query, false, expectedId);
+    final String typeAndAspect = documentPrefix(TEST_CMIS_DOCUMENT_TYPE) + ","
+      + aspectPrefix(ASPECT_TITLED);
+
+    props.put(PropertyIds.OBJECT_TYPE_ID, typeAndAspect);
+    props.put(PROPERTY_DESCRIPTION, description);
+
+    final String expectedId = createTestCMISDocument(testRootFolder, "test", props).getId();
+
+    final String query = "select d.*, t.* from  swct:document as d join cm:titled as t on d.cmis:objectid = t.cmis:objectid where t.cm:description = '%s'";
+    assertQueryResults(String.format(query, description), false, expectedId);
+  }
+
+  @Test
+  public void addRemoveAspects() {
+    final String description = "test description";
+    final String queryTemplate = "select d.*, t.* from  swct:document as d join cm:titled as t on d.cmis:objectid = t.cmis:objectid where t.cm:description = '%s'";
+    final String query = String.format(queryTemplate, description);
+
+    final AlfrescoDocument alfDoc = (AlfrescoDocument)createTestCMISDocument(testRootFolder,
+      "test", null);
+
+    final Set<String> emptyIdSet = Collections.emptySet();
+    assertQueryResults(query, false, emptyIdSet);
+
+    // Add the titled aspect and set the description property
+    final Map<String, Object> props = new HashMap<String, Object>();
+    props.put(PROPERTY_DESCRIPTION, description);
+    final String prefixedAspect = aspectPrefix(ASPECT_TITLED);
+    alfDoc.addAspect(prefixedAspect, props);
+    assertQueryResults(query, false, alfDoc.getId());
+
+    // Now remove the aspect
+    alfDoc.removeAspect(prefixedAspect);
+    assertQueryResults(query, false, emptyIdSet);
   }
 
   /**
@@ -1092,14 +1124,19 @@ public class CMISTest {
   private Document createTestCMISDocument(final Folder parent, final String name,
     final Map<String, Object> props, final String content) {
 
+    final Map<String, Object> properties = new HashMap<String, Object>();
+    if (props != null) {
+      properties.putAll(props);
+    }
     ContentStream contentStream = null;
     if (content != null) {
       contentStream = new ContentStreamImpl("test", "text/plain", content);
     }
-
-    props.put(PropertyIds.NAME, name);
-    props.put(PropertyIds.OBJECT_TYPE_ID, documentPrefix(TEST_CMIS_DOCUMENT_TYPE));
-    return parent.createDocument(props, contentStream, null);
+    properties.put(PropertyIds.NAME, name);
+    if (!properties.containsKey(PropertyIds.OBJECT_TYPE_ID)) {
+      properties.put(PropertyIds.OBJECT_TYPE_ID, documentPrefix(TEST_CMIS_DOCUMENT_TYPE));
+    }
+    return parent.createDocument(properties, contentStream, null);
   }
 
   /**
