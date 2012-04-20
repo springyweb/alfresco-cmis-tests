@@ -126,6 +126,11 @@ public class CMISTest {
     parameters.put(SessionParameter.BINDING_TYPE,
         BindingType.ATOMPUB.value());
 
+    // Set the alfresco object factory
+    parameters.put(SessionParameter.OBJECT_FACTORY_CLASS,
+      "org.alfresco.cmis.client.impl.AlfrescoObjectFactoryImpl");
+
+
     // Create a session with the client-side cache disabled.
     final SessionFactoryImpl sessionFactory = SessionFactoryImpl.newInstance();
     final Repository repository = sessionFactory.getRepositories(parameters).get(0);
@@ -162,33 +167,50 @@ public class CMISTest {
     // Create test documents with a single string property
     final Map<String, Object> props = new HashMap<String, Object>();
 
-    final String[] strings = { "b", "Bc", "c", "Cb" };
-    for (int i = 0; i < strings.length; i++) {
-      props.put(TEST_CMIS_PROPERY_SINGLE_STRING, strings[i]);
-      createTestCMISDocument(testRootFolder, "test" + i, props);
-    }
+    props.put(TEST_CMIS_PROPERY_SINGLE_STRING, "b");
+    final String id_b = createTestCMISDocument(testRootFolder, "testb", props).getId();
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 1, testRootFolder.getId(),
+    props.put(TEST_CMIS_PROPERY_SINGLE_STRING, "Bc");
+    final String id_Bc = createTestCMISDocument(testRootFolder, "testBc", props).getId();
+
+    props.put(TEST_CMIS_PROPERY_SINGLE_STRING, "c");
+    final String id_c = createTestCMISDocument(testRootFolder, "testc", props).getId();
+
+    props.put(TEST_CMIS_PROPERY_SINGLE_STRING, "Cb");
+    final String id_Cb = createTestCMISDocument(testRootFolder, "testCb", props).getId();
+
+    final String expecedId = id_b;
+    assertQueryResult(PREDICATE_QUERY_TEMPLATE_STRING, expecedId, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_STRING,
       Predicate.EQUALS.getSymbol(), "b");
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 3, testRootFolder.getId(),
-      TEST_CMIS_PROPERY_SINGLE_STRING,
-      Predicate.NOT_EQUALS.getSymbol(), "b");
+    Set<String> expectedIds = toSet(id_Bc, id_c, id_Cb);
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 2, testRootFolder.getId(),
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_STRING, expectedIds, testRootFolder.getId(),
+        TEST_CMIS_PROPERY_SINGLE_STRING,
+        Predicate.NOT_EQUALS.getSymbol(), "b");
+
+    expectedIds = toSet(id_b, id_Bc);
+
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_STRING, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_STRING,
       Predicate.LESS_THAN.getSymbol(), "c");
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 3, testRootFolder.getId(),
+    expectedIds = toSet(id_b, id_Bc, id_c);
+
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_STRING, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_STRING,
       Predicate.LESS_THAN_EQUAL_TO.getSymbol(), "c");
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 3, testRootFolder.getId(),
+    expectedIds = toSet(id_c, id_Bc, id_Cb);
+
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_STRING, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_STRING,
       Predicate.GREATER_THAN.getSymbol(), "b");
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 4, testRootFolder.getId(),
+    expectedIds = toSet(id_b, id_c, id_Bc, id_Cb);
+
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_STRING, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_STRING,
       Predicate.GREATER_THAN_EQUAL_TO.getSymbol(), "b");
   }
@@ -197,36 +219,45 @@ public class CMISTest {
   public void comparisonPredicatesInteger() {
 
     final Map<String, Object> props = new HashMap<String, Object>();
-    // Create 4 test documents
-    for (int i = 1; i <= 4; i++) {
-      props.put(TEST_CMIS_PROPERY_SINGLE_INT, i);
-      createTestCMISDocument(testRootFolder, "test" + i, props);
-    }
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_INTEGER, 1, testRootFolder.getId(),
+    props.put(TEST_CMIS_PROPERY_SINGLE_INT, 1);
+    final String id_1 = createTestCMISDocument(testRootFolder, "test1", props).getId();
+    props.put(TEST_CMIS_PROPERY_SINGLE_INT, 2);
+    final String id_2 = createTestCMISDocument(testRootFolder, "test2", props).getId();
+    props.put(TEST_CMIS_PROPERY_SINGLE_INT, 3);
+    final String id_3 = createTestCMISDocument(testRootFolder, "test3", props).getId();
+    props.put(TEST_CMIS_PROPERY_SINGLE_INT, 4);
+    final String id_4 = createTestCMISDocument(testRootFolder, "test4", props).getId();
+
+    final String expectedId = id_1;
+    assertQueryResult(PREDICATE_QUERY_TEMPLATE_INTEGER, expectedId, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_INT,
       Predicate.EQUALS.getSymbol(), 1);
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_INTEGER, 3, testRootFolder.getId(),
+    Set<String> expectedIds = toSet(id_2, id_3, id_4);
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_INTEGER, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_INT,
       Predicate.NOT_EQUALS.getSymbol(), 1);
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_INTEGER, 2, testRootFolder.getId(),
+    expectedIds = toSet(id_1, id_2);
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_INTEGER, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_INT,
       Predicate.LESS_THAN.getSymbol(), 3);
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_INTEGER, 3, testRootFolder.getId(),
+    expectedIds = toSet(id_1, id_2, id_3);
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_INTEGER, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_INT,
       Predicate.LESS_THAN_EQUAL_TO.getSymbol(), 3);
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_INTEGER, 3, testRootFolder.getId(),
+    expectedIds = toSet(id_2, id_3, id_4);
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_INTEGER, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_INT,
       Predicate.GREATER_THAN.getSymbol(), 1);
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_INTEGER, 4, testRootFolder.getId(),
+    expectedIds = toSet(id_1, id_2, id_3, id_4);
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_INTEGER, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_INT,
       Predicate.GREATER_THAN_EQUAL_TO.getSymbol(), 1);
-
   }
 
   @Test
@@ -235,38 +266,45 @@ public class CMISTest {
     final Map<String, Object> props = new HashMap<String, Object>();
     // Create 4 test docs
     props.put(TEST_CMIS_PROPERY_SINGLE_DOUBLE, 1.0);
-    createTestCMISDocument(testRootFolder, "test1", props);
+    final String id_1_0 = createTestCMISDocument(testRootFolder, "test1", props).getId();
 
     props.put(TEST_CMIS_PROPERY_SINGLE_DOUBLE, 1.1);
-    createTestCMISDocument(testRootFolder, "test2", props);
+    final String id_1_1 = createTestCMISDocument(testRootFolder, "test2", props).getId();
 
     props.put(TEST_CMIS_PROPERY_SINGLE_DOUBLE, 1.2);
-    createTestCMISDocument(testRootFolder, "test3", props);
+    final String id_1_2 = createTestCMISDocument(testRootFolder, "test3", props).getId();
 
     props.put(TEST_CMIS_PROPERY_SINGLE_DOUBLE, 1.3);
-    createTestCMISDocument(testRootFolder, "test4", props);
+    final String id_1_3 = createTestCMISDocument(testRootFolder, "test4", props).getId();
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_DECIMAL, 1, testRootFolder.getId(),
+    final String expectedId = id_1_0;
+
+    assertQueryResult(PREDICATE_QUERY_TEMPLATE_DECIMAL, expectedId, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_DOUBLE,
       Predicate.EQUALS.getSymbol(), 1.0);
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_DECIMAL, 3, testRootFolder.getId(),
+    Set<String> expectedIds = toSet(id_1_1, id_1_2, id_1_3);
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_DECIMAL, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_DOUBLE,
       Predicate.NOT_EQUALS.getSymbol(), 1.0);
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_DECIMAL, 2, testRootFolder.getId(),
+    expectedIds = toSet(id_1_0, id_1_1);
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_DECIMAL, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_DOUBLE,
       Predicate.LESS_THAN.getSymbol(), 1.2);
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_DECIMAL, 3, testRootFolder.getId(),
+    expectedIds = toSet(id_1_0, id_1_1, id_1_2);
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_DECIMAL, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_DOUBLE,
       Predicate.LESS_THAN_EQUAL_TO.getSymbol(), 1.2);
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_DECIMAL, 3, testRootFolder.getId(),
+    expectedIds = toSet(id_1_1, id_1_2, id_1_3);
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_DECIMAL, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_DOUBLE,
       Predicate.GREATER_THAN.getSymbol(), 1.0);
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_DECIMAL, 4, testRootFolder.getId(),
+    expectedIds = toSet(id_1_0, id_1_1, id_1_2, id_1_3);
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_DECIMAL, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_DOUBLE,
       Predicate.GREATER_THAN_EQUAL_TO.getSymbol(), 1.0);
   }
@@ -277,17 +315,22 @@ public class CMISTest {
     final Map<String, Object> props = new HashMap<String, Object>();
     // Create 2 test docs with true and false
     props.put(TEST_CMIS_PROPERY_SINGLE_BOOLEAN, true);
-    createTestCMISDocument(testRootFolder, "test1", props);
+    final String id_true = createTestCMISDocument(testRootFolder, "test1", props).getId();
 
     props.put(TEST_CMIS_PROPERY_SINGLE_BOOLEAN, false);
-    createTestCMISDocument(testRootFolder, "test2", props);
+    final String id_false = createTestCMISDocument(testRootFolder, "test2", props).getId();
 
-    final String[] testVals = { "true", "TRUE", "false", "FALSE" };
-    for (final String val: testVals) {
-      testPredicate(PREDICATE_QUERY_TEMPLATE_BOOLEAN, 1, testRootFolder.getId(),
-        TEST_CMIS_PROPERY_SINGLE_BOOLEAN,
-        Predicate.EQUALS.getSymbol(), val);
-    }
+    String expectedId = id_true;
+
+    assertQueryResult(PREDICATE_QUERY_TEMPLATE_BOOLEAN, expectedId, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_BOOLEAN,
+      Predicate.EQUALS.getSymbol(), true);
+
+    expectedId = id_false;
+
+    assertQueryResult(PREDICATE_QUERY_TEMPLATE_BOOLEAN, expectedId, testRootFolder.getId(),
+      TEST_CMIS_PROPERY_SINGLE_BOOLEAN,
+      Predicate.EQUALS.getSymbol(), false);
   }
 
   /**
@@ -297,11 +340,11 @@ public class CMISTest {
    */
   @Test
   public void comparisonPredicatesDateTime() {
-
     // Create 4 dates 1 Second apart Note: The time portion of the date is
     // ignored
     final Map<String, Object> props = new HashMap<String, Object>();
     final Date[] dates = new Date[4];
+    final String[] ids = new String[4];
     final GregorianCalendar calendar = new GregorianCalendar();
 
     for (int i = 0; i < dates.length; i++) {
@@ -310,31 +353,37 @@ public class CMISTest {
       // Note: For OpenCmis to work we add the calendar object not the date (see
       // http://blog.remysaissy.com/2012/04/solving-property-foo-is-datetime.html)
       props.put(TEST_CMIS_PROPERY_SINGLE_DATE_TIME, calendar);
-      createTestCMISDocument(testRootFolder, "test" + i, props);
+      ids[i] = createTestCMISDocument(testRootFolder, "test" + i, props).getId();
       calendar.add(Calendar.MILLISECOND, 1);
     }
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_DATETIME, 1, testRootFolder.getId(),
+    String expectedId = ids[0];
+    assertQueryResult(PREDICATE_QUERY_TEMPLATE_DATETIME, expectedId, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_DATE_TIME,
       Predicate.EQUALS.getSymbol(), ISO8601DateFormat.format(dates[0]));
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_DATETIME, 3, testRootFolder.getId(),
+    Set<String> expectedIds = toSet(ids[1], ids[2], ids[3]);
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_DATETIME, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_DATE_TIME,
       Predicate.NOT_EQUALS.getSymbol(), ISO8601DateFormat.format(dates[0]));
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_DATETIME, 1, testRootFolder.getId(),
+    expectedId = ids[0];
+    assertQueryResult(PREDICATE_QUERY_TEMPLATE_DATETIME, expectedId, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_DATE_TIME,
       Predicate.LESS_THAN.getSymbol(), ISO8601DateFormat.format(dates[1]));
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_DATETIME, 2, testRootFolder.getId(),
+    expectedIds = toSet(ids[0], ids[1]);
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_DATETIME, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_DATE_TIME,
       Predicate.LESS_THAN_EQUAL_TO.getSymbol(), ISO8601DateFormat.format(dates[1]));
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_DATETIME, 3, testRootFolder.getId(),
+    expectedIds = toSet(ids[1], ids[2], ids[3]);
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_DATETIME, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_DATE_TIME,
       Predicate.GREATER_THAN.getSymbol(), ISO8601DateFormat.format(dates[0]));
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_DATETIME, 4, testRootFolder.getId(),
+    expectedIds = toSet(ids[0], ids[1], ids[2], ids[3]);
+    assertQueryResults(PREDICATE_QUERY_TEMPLATE_DATETIME, expectedIds, testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_DATE_TIME,
       Predicate.GREATER_THAN_EQUAL_TO.getSymbol(), ISO8601DateFormat.format(dates[0]));
   }
@@ -345,14 +394,15 @@ public class CMISTest {
     final Map<String, Object> props = new HashMap<String, Object>();
     // Create 3 test docs - no properties required for ID testing
     final String id1 = createTestCMISDocument(testRootFolder, "test1", props).getId();
-    createTestCMISDocument(testRootFolder, "test2", props).getId();
-    createTestCMISDocument(testRootFolder, "test3", props).getId();
+    final String id2 = createTestCMISDocument(testRootFolder, "test2", props).getId();
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 1, testRootFolder.getId(),
+    String expectedId = id1;
+    assertQueryResult(PREDICATE_QUERY_TEMPLATE_STRING, expectedId, testRootFolder.getId(),
       PropertyIds.OBJECT_ID,
       Predicate.EQUALS.getSymbol(), id1);
 
-    testPredicate(PREDICATE_QUERY_TEMPLATE_STRING, 2, testRootFolder.getId(),
+    expectedId = id2;
+    assertQueryResult(PREDICATE_QUERY_TEMPLATE_STRING, expectedId, testRootFolder.getId(),
       PropertyIds.OBJECT_ID,
       Predicate.NOT_EQUALS.getSymbol(), id1);
   }
@@ -431,20 +481,20 @@ public class CMISTest {
     final String[] testVals = { "%test%", "test", "t%t", "t__t" };
 
     for (final String testVal: testVals) {
-      testPredicateQuerySingleResult(PREDICATE_QUERY_TEMPLATE_STRING, expectedId,
+      assertQueryResult(PREDICATE_QUERY_TEMPLATE_STRING, expectedId,
         testRootFolder.getId(),
         PropertyIds.NAME, Predicate.LIKE.getSymbol(), testVal);
     }
 
     // Test escaping %
     expectedId = createTestCMISDocument(testRootFolder, "t%t", props).getId();
-    testPredicateQuerySingleResult(PREDICATE_QUERY_TEMPLATE_STRING, expectedId,
+    assertQueryResult(PREDICATE_QUERY_TEMPLATE_STRING, expectedId,
       testRootFolder.getId(),
       PropertyIds.NAME, Predicate.LIKE.getSymbol(), "t\\%t");
 
     // Test escaping _
     expectedId = createTestCMISDocument(testRootFolder, "t__t", props).getId();
-    testPredicateQuerySingleResult(PREDICATE_QUERY_TEMPLATE_STRING, expectedId,
+    assertQueryResult(PREDICATE_QUERY_TEMPLATE_STRING, expectedId,
       testRootFolder.getId(),
       PropertyIds.NAME, Predicate.LIKE.getSymbol(), "t\\_\\_t");
   }
@@ -466,12 +516,12 @@ public class CMISTest {
       .getId();
 
     // Test for the item without the property set using IS NULL
-    testPredicateQuerySingleResult(TWO_VAL_PREDICATE_QUERY_TEMPLATE_STRING, idWithoutPropertySet,
+    assertQueryResult(TWO_VAL_PREDICATE_QUERY_TEMPLATE_STRING, idWithoutPropertySet,
       testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_BOOLEAN, Predicate.IS_NULL.getSymbol());
 
     // Test for the item with the property set using IS NOT NULL
-    testPredicateQuerySingleResult(TWO_VAL_PREDICATE_QUERY_TEMPLATE_STRING, idWithPropertySet,
+    assertQueryResult(TWO_VAL_PREDICATE_QUERY_TEMPLATE_STRING, idWithPropertySet,
       testRootFolder.getId(),
       TEST_CMIS_PROPERY_SINGLE_BOOLEAN, Predicate.IS_NOT_NULL.getSymbol());
   }
@@ -560,7 +610,7 @@ public class CMISTest {
 
     final String expectedId = createTestCMISDocument(testRootFolder, "test", props).getId();
     for (final Object value: testValues) {
-      testPredicateQuerySingleResult(queryTemplate, expectedId,
+      assertQueryResult(queryTemplate, expectedId,
         testRootFolder.getId(),
         value, Predicate.QUANTIFIED_COMPARISION.getSymbol(), propertyName);
     }
@@ -684,46 +734,90 @@ public class CMISTest {
 
     // term
     Set<String> expectedIds = toSet(testDocumentId, testTubeDocumentId, tubeTestDocumentId);
-    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+    assertQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
       testRootFolder.getId(), buildContains("test"));
 
     // term AND (default)
     expectedIds = toSet(testTubeDocumentId, tubeTestDocumentId);
-    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+    assertQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
       testRootFolder.getId(), buildContains("test tube"));
 
     // term OR
     expectedIds = toSet(testDocumentId, tubeDocumentId, testTubeDocumentId, tubeTestDocumentId);
-    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+    assertQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
       testRootFolder.getId(), buildContains("test OR tube"));
 
     // negation precedence over OR - Note This does NOT mean find all documents without "test" and then from those find all those with "tube"
     // compare with bracketed negation OR terms below
     expectedIds = toSet(tubeDocumentId, testTubeDocumentId, tubeTestDocumentId);
-    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+    assertQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
       testRootFolder.getId(), buildContains("-test OR tube"));
 
     // bracketed negation OR terms,
     expectedIds = Collections.emptySet();
-    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+    assertQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
       testRootFolder.getId(), buildContains("-(test OR tube)"));
 
     // Phrase
     expectedIds = toSet(testTubeDocumentId);
-    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+    assertQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
       testRootFolder.getId(), buildContainsPhrase("test tube"));
 
     // negated term
     expectedIds = toSet(tubeDocumentId);
-    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+    assertQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
       testRootFolder.getId(), buildContains("-test"));
 
     // negated phrase
     expectedIds = toSet(testDocumentId, tubeDocumentId, tubeTestDocumentId);
-    testPredicateQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
+    assertQueryResults(SINGLE_VAL_PREDICATE_QUERY_TEMPLATE_STRING, expectedIds,
       testRootFolder.getId(), buildContainsNegatedPhrase("test tube"));
-
   }
+
+  @Test
+  public void folderSearches() {
+
+    final String allFoldersInFolderQuery = "SELECT * FROM cmis:folder WHERE in_folder('%s') and cmis:name='%s'";
+    final String allFoldersInTreeQuery = "SELECT * FROM cmis:folder WHERE in_tree('%s') and cmis:name='%s'";
+
+    // Create two folders of the same name one beneath the other
+    final String testFolderName = "my_test_folder";
+    final Folder testFolder = createTestCMISFolder(testRootFolder, testFolderName);
+    final Folder testSubFolder = createTestCMISFolder(testFolder, testFolderName);
+
+
+    // Search IMMEADIATELY within the test root space using in_folder
+    final String expectedId = testFolder.getId();
+    assertQueryResult(allFoldersInFolderQuery, expectedId, testRootFolder.getId(), testFolderName);
+
+    // Now search again this time limit the search to ANYWHERE beneath the test
+    // root space using in_tree
+    final Set<String> expectedIds = toSet(testFolder.getId(), testSubFolder.getId());
+    assertQueryResults(allFoldersInTreeQuery, expectedIds, testRootFolder.getId(), testFolderName);
+  }
+
+  /**
+   * START OF TESTS FOR ALFRESCO OPEN CMIS EXTENSION
+   * 
+   */
+
+  @Test
+  public void createWithAspect() {
+    final Map<String, Object> properties = new HashMap<String, Object>();
+    properties.put(PropertyIds.NAME, "test");
+    properties.put(PropertyIds.OBJECT_TYPE_ID, documentPrefix(TEST_CMIS_DOCUMENT_TYPE)
+      + ",P:cm:titled");
+    properties.put("cm:description", "test description");
+
+    final String expectedId = testRootFolder.createDocument(properties, null, null).getId();
+    final String query = "select d.*, t.* from  swct:document as d join cm:titled as t on d.cmis:objectid = t.cmis:objectid where t.cm:description = 'test description'";
+    assertQueryResults(query, false, expectedId);
+  }
+
+  /**
+   * END OF TESTS FOR ALFRESCO OPEN CMIS EXTENSION
+   * 
+   */
 
   private String buildContains(final String s) {
     return buildContains(s, false, false);
@@ -776,7 +870,7 @@ public class CMISTest {
     final String predicateValues, final String propertyName) {
 
     final String expectedId = createTestCMISDocument(testRootFolder, "test", props).getId();
-    testPredicateQuerySingleResult(PREDICATE_QUANTIFIED_IN_TEMPLATE_STRING, expectedId,
+    assertQueryResult(PREDICATE_QUANTIFIED_IN_TEMPLATE_STRING, expectedId,
         testRootFolder.getId(), propertyName, predicateValues);
   }
 
@@ -825,38 +919,6 @@ public class CMISTest {
     return new StringBuilder("'").append(o).append("'").toString();
   }
 
-  @Test
-  public void folderSearches() {
-
-    final String allFoldersInFolderQuery = "SELECT * FROM cmis:folder WHERE in_folder('%s') and cmis:name='%s'";
-    final String allFoldersInTreeQuery = "SELECT * FROM cmis:folder WHERE in_tree('%s') and cmis:name='%s'";
-
-    // Create two folders of the same name one beneath the other
-    final String testFolderName = "my_test_folder";
-    final Folder testFolder = createTestCMISFolder(testRootFolder, testFolderName);
-    createTestCMISFolder(testFolder, testFolderName);
-
-
-    // Search IMMEADIATELY within the test root space using in_folder
-
-    assertEquals(
-      "Wrong result count",
-      1,
-      queryResultCount(
-        String.format(allFoldersInFolderQuery, testRootFolder.getId(), testFolderName),
-        false));
-
-    // Now search again this time limit the search to ANYWHERE beneath the test
-    // root space using in_tree
-
-    assertEquals(
-      "Wrong result count",
-      2,
-      queryResultCount(
-        String.format(allFoldersInTreeQuery, testRootFolder.getId(), testFolderName),
-        false));
-  }
-
   /**
    * 
    * @param path
@@ -876,22 +938,6 @@ public class CMISTest {
     } catch (final CmisObjectNotFoundException ignored) {
     }
     return folder;
-  }
-
-  /**
-   * Helper method to test predicate queries
-   * 
-   * @param queryTemplate
-   *          - A query with parameters which are resolvable via String.format
-   * 
-   * @param expectedResultCount
-   * @param values
-   */
-  private void testPredicate(final String queryTemplate, final int expectedResultCount,
-    final Object... values) {
-
-    assertEquals("Wrong result count", expectedResultCount,
-      queryResultCount(String.format(queryTemplate, values), false));
   }
 
   private void testInPredicate(final Set<Object> allTokens, final String propertyName,
@@ -952,33 +998,46 @@ public class CMISTest {
    * @param values
    *          - The values to replace in the template.
    */
-  private void testPredicateQuerySingleResult(final String queryTemplate,
+  private void assertQueryResult(final String queryTemplate,
     final String expectedId, final Object... values) {
 
-    final ItemIterable<QueryResult> results = executeQuery(
-      String.format(queryTemplate, values), false);
-
-    assertEquals("Wrong result count", 1, results.getTotalNumItems());
-    final String actualId = (String)results.iterator().next()
-      .getPropertyValueById(PropertyIds.OBJECT_ID);
-    assertEquals("Wrong id found", expectedId, actualId);
+    assertQueryResults(queryTemplate, toSet(expectedId), values);
   }
 
   /**
    * @param queryTemplate
    *          - The name of a query template
-   * @param expectedId
-   *          - The object id of the single result expected
+   * @param expectedIds
+   *          - The object ids of the expected results
    * @param values
    *          - The values to replace in the template.
    */
-  private void testPredicateQueryResults(final String queryTemplate,
+  private void assertQueryResults(final String queryTemplate,
     final Set<String> expectedIds, final Object... values) {
+
+    assertQueryResults(String.format(queryTemplate, values), false, expectedIds);
+  }
+
+  private void assertQueryResults(final String query, final boolean searchAllVersions,
+    final String... expectedIds) {
+
+    assertQueryResults(query, searchAllVersions, toSet(expectedIds));
+  }
+
+  /**
+   * 
+   * @param query
+   * @param searchAllVersions
+   * @param expectedIds
+   *          - The
+   */
+  private void assertQueryResults(final String query, final boolean searchAllVersions,
+    final Set<String> expectedIds) {
 
     final Set<String> actualIds = new HashSet<String>();
 
     final ItemIterable<QueryResult> results = executeQuery(
-      String.format(queryTemplate, values), false);
+      query, false);
 
     assertEquals("Wrong result count", expectedIds.size(), results.getTotalNumItems());
     for (final QueryResult result: results) {
@@ -993,15 +1052,6 @@ public class CMISTest {
     final Object... values) {
 
     return executeQuery(String.format(queryTemplate, values), false);
-  }
-
-  /**
-   * @param query
-   * @param searchAllVersions
-   * @return The total number of items found by the query
-   */
-  private long queryResultCount(final String query, final boolean searchAllVersions) {
-    return executeQuery(query, searchAllVersions).getTotalNumItems();
   }
 
   /**
@@ -1034,7 +1084,7 @@ public class CMISTest {
   private Folder createTestCMISFolder(final Folder parent, final String name) {
     final Map<String, String> props = new HashMap<String, String>();
     props.put(PropertyIds.NAME, name);
-    props.put(PropertyIds.OBJECT_TYPE_ID, "F:" + TEST_CMIS_FOLDER_TYPE);
+    props.put(PropertyIds.OBJECT_TYPE_ID, folderPrefix(TEST_CMIS_FOLDER_TYPE));
     return parent.createFolder(props);
   }
 
@@ -1048,7 +1098,40 @@ public class CMISTest {
     }
 
     props.put(PropertyIds.NAME, name);
-    props.put(PropertyIds.OBJECT_TYPE_ID, "D:" + TEST_CMIS_DOCUMENT_TYPE);
+    props.put(PropertyIds.OBJECT_TYPE_ID, documentPrefix(TEST_CMIS_DOCUMENT_TYPE));
     return parent.createDocument(props, contentStream, null);
+  }
+
+  /**
+   * Prefix a Document type for CMIS
+   * 
+   * @param type
+   *          e.g my:type
+   * @return D:my:type
+   */
+  private String documentPrefix(final String documentType) {
+    return "D:" + documentType;
+  }
+
+  /**
+   * Prefix a Folder type for CMIS
+   * 
+   * @param type
+   *          e.g my:type
+   * @return F:my:type
+   */
+  private String folderPrefix(final String folderType) {
+    return "F:" + folderType;
+  }
+
+  /**
+   * Prefix an Aspect type for CMIS
+   * 
+   * @param type
+   *          e.g my:type
+   * @return P:my:type
+   */
+  private String aspectPrefix(final String aspectType) {
+    return "P:" + aspectType;
   }
 }
